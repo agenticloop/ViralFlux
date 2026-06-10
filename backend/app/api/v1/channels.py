@@ -16,7 +16,14 @@ from app.models.analytics import VideoAnalytic
 from app.models.channel import ChannelSchedule, YoutubeChannel
 from app.models.plan import Plan
 from app.models.video_job import VideoJob
-from app.schemas.channel import ChannelCreate, ChannelOut, ChannelUpdate, ScheduleConfig, ScheduleOut
+from app.schemas.channel import (
+    ChannelCreate,
+    ChannelOut,
+    ChannelUpdate,
+    ScheduleConfig,
+    ScheduleOut,
+)
+from app.services.postproxy_service import PostProxyError, PostProxyService
 
 logger = logging.getLogger(__name__)
 
@@ -136,90 +143,94 @@ async def connect_youtube(
     current_user=Depends(get_current_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return the Google OAuth URL for connecting a YouTube channel."""
+    """Return a PostProxy OAuth URL for connecting a YouTube channel.
+
+    The user is redirected to Google via PostProxy. After granting access,
+    PostProxy redirects back to the frontend which should call
+    POST /{channel_id}/link-postproxy with the resulting profile_id.
+    """
     await _get_channel_or_404(channel_id, current_user.id, db)
 
-    from google_auth_oauthlib.flow import Flow
+    if not settings.POSTPROXY_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="POSTPROXY_API_KEY is not configured.",
+        )
 
-    scopes = [
-        "https://www.googleapis.com/auth/youtube.upload",
-        "https://www.googleapis.com/auth/youtube.readonly",
-    ]
-    flow = Flow.from_client_config(
-        {
-            "web": {
-                "client_id": settings.YOUTUBE_CLIENT_ID,
-                "client_secret": settings.YOUTUBE_CLIENT_SECRET,
-                "redirect_uris": [settings.YOUTUBE_REDIRECT_URI],
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-            }
-        },
-        scopes=scopes,
-        redirect_uri=settings.YOUTUBE_REDIRECT_URI,
-    )
-    auth_url, _ = flow.authorization_url(
-        access_type="offline",
-        include_granted_scopes="true",
-        state=str(channel_id),
-        prompt="consent",
-    )
-    return {"oauth_url": auth_url}
+    svc = PostProxyService()
+    try:
+        groups = await svc.list_profile_groups()
+    except PostProxyError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+
+    if not groups:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No PostProxy profile groups found. Create one in the PostProxy dashboard.",
+        )
+
+    profile_group_id = groups[0].get("id") or groups[0].get("profile_group_id")
+    redirect_url = f"{settings.APP_URL}/dashboard/channels/{channel_id}/postproxy-callback"
+
+    try:
+        result = await svc.initialize_connection(profile_group_id, redirect_url)
+    except PostProxyError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+
+    return {
+        "oauth_url": result.get("url"),
+        "connection_id": result.get("connection_id"),
+        "profile_group_id": profile_group_id,
+    }
 
 
-@router.get("/{channel_id}/oauth-callback")
-async def oauth_callback(
+@router.post("/{channel_id}/link-postproxy")
+async def link_postproxy_profile(
     channel_id: UUID,
-    code: str,
+    payload: dict,
     current_user=Depends(get_current_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Handle YouTube OAuth callback, store encrypted tokens."""
+    """Store a PostProxy profile_id on this channel.
+
+    Call this after the user completes the PostProxy OAuth flow.
+    Body: {"profile_id": "<postproxy-profile-id>"}
+    """
     channel = await _get_channel_or_404(channel_id, current_user.id, db)
 
-    from datetime import datetime
+    profile_id = payload.get("profile_id", "").strip()
+    if not profile_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="profile_id is required.",
+        )
 
-    from google_auth_oauthlib.flow import Flow
-
-    flow = Flow.from_client_config(
-        {
-            "web": {
-                "client_id": settings.YOUTUBE_CLIENT_ID,
-                "client_secret": settings.YOUTUBE_CLIENT_SECRET,
-                "redirect_uris": [settings.YOUTUBE_REDIRECT_URI],
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-            }
-        },
-        scopes=[
-            "https://www.googleapis.com/auth/youtube.upload",
-            "https://www.googleapis.com/auth/youtube.readonly",
-        ],
-        redirect_uri=settings.YOUTUBE_REDIRECT_URI,
-    )
-    flow.fetch_token(code=code)
-    credentials = flow.credentials
-
-    channel.oauth_access_token = encrypt_token(credentials.token)
-    channel.oauth_refresh_token = (
-        encrypt_token(credentials.refresh_token) if credentials.refresh_token else None
-    )
-    channel.oauth_expiry = credentials.expiry
-
-    # Fetch YouTube channel ID
-    try:
-        from googleapiclient.discovery import build
-
-        youtube = build("youtube", "v3", credentials=credentials)
-        resp = youtube.channels().list(part="id", mine=True).execute()
-        items = resp.get("items", [])
-        if items:
-            channel.youtube_channel_id = items[0]["id"]
-    except Exception as exc:
-        logger.warning("Could not fetch YouTube channel ID: %s", exc)
-
+    channel.postproxy_profile_id = profile_id
     await db.flush()
-    return {"message": "YouTube channel connected successfully.", "channel_id": str(channel_id)}
+    return {"message": "PostProxy profile linked.", "profile_id": profile_id}
+
+
+@router.get("/postproxy-profiles")
+async def list_postproxy_profiles(
+    current_user=Depends(get_current_verified_user),
+):
+    """List YouTube profiles connected to PostProxy on this account.
+
+    Use the returned profile IDs with POST /{channel_id}/link-postproxy.
+    """
+    if not settings.POSTPROXY_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="POSTPROXY_API_KEY is not configured.",
+        )
+
+    svc = PostProxyService()
+    try:
+        profiles = await svc.list_profiles(platform="youtube")
+    except PostProxyError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+
+    return {"profiles": profiles}
 
 
 @router.post("/{channel_id}/schedule", response_model=ScheduleOut)

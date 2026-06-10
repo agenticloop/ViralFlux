@@ -43,7 +43,10 @@ class Settings(BaseSettings):
     PIXABAY_API_KEY: str = ""
     UNSPLASH_ACCESS_KEY: str = ""
 
-    # YouTube OAuth
+    # PostProxy (YouTube auto-posting)
+    POSTPROXY_API_KEY: str = ""
+
+    # YouTube OAuth (kept for analytics; uploads now go via PostProxy)
     YOUTUBE_CLIENT_ID: str = ""
     YOUTUBE_CLIENT_SECRET: str = ""
     YOUTUBE_REDIRECT_URI: str = ""

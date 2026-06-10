@@ -29,6 +29,7 @@ class ChannelOut(BaseModel):
     user_id: UUID
     channel_name: str
     youtube_channel_id: str | None
+    postproxy_profile_id: str | None
     oauth_expiry: datetime | None
     default_voice_provider: str
     default_voice_id: str

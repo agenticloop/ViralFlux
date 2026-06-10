@@ -40,6 +40,7 @@ class YoutubeChannel(Base):
     oauth_expiry: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    postproxy_profile_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     default_voice_provider: Mapped[str] = mapped_column(
         String(50), default="edge-tts", nullable=False
     )

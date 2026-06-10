@@ -172,38 +172,62 @@ async def _upload_async(job_id: str) -> None:
             job.status = "uploading"
             await session.commit()
 
-            from app.core.security import decrypt_token
-            from app.services.youtube_service import YouTubeService
-
-            yt = YouTubeService(
-                settings.YOUTUBE_CLIENT_ID,
-                settings.YOUTUBE_CLIENT_SECRET,
-                settings.YOUTUBE_REDIRECT_URI,
-            )
-
-            access_token = decrypt_token(channel.oauth_access_token)
-            refresh_token = decrypt_token(channel.oauth_refresh_token)
-
             scheduled_time: str | None = None
             if job.scheduled_for:
                 scheduled_time = job.scheduled_for.isoformat()
 
-            video_id = await yt.upload_video(
-                job.video_path,
-                job.seo_title,
-                job.seo_description,
-                job.seo_tags,
-                access_token,
-                refresh_token,
-                scheduled_time,
-            )
+            if channel.postproxy_profile_id and settings.POSTPROXY_API_KEY:
+                # --- PostProxy upload path ---
+                from app.services.postproxy_service import PostProxyService
 
-            job.youtube_video_id = video_id
-            job.youtube_url = f"https://youtube.com/shorts/{video_id}"
-            job.status = "posted"
-            job.posted_at = datetime.now(timezone.utc)
-            await session.commit()
-            logger.info("Job %s posted successfully as YouTube video %s", job_id, video_id)
+                svc = PostProxyService()
+                post_id = await svc.upload_video(
+                    profile_id=channel.postproxy_profile_id,
+                    video_path=job.video_path,
+                    title=job.seo_title or "",
+                    description=job.seo_description or "",
+                    tags=job.seo_tags or [],
+                    scheduled_at=scheduled_time,
+                )
+                # PostProxy doesn't return a YouTube video_id immediately (it's async)
+                # Store the PostProxy post_id and set a provisional YouTube URL
+                job.youtube_video_id = f"postproxy:{post_id}"
+                job.youtube_url = f"https://postproxy.dev/posts/{post_id}"
+                job.status = "posted"
+                job.posted_at = datetime.now(timezone.utc)
+                await session.commit()
+                logger.info("Job %s submitted to PostProxy (post_id=%s)", job_id, post_id)
+
+            else:
+                # --- Legacy direct YouTube API upload path ---
+                from app.core.security import decrypt_token
+                from app.services.youtube_service import YouTubeService
+
+                yt = YouTubeService(
+                    settings.YOUTUBE_CLIENT_ID,
+                    settings.YOUTUBE_CLIENT_SECRET,
+                    settings.YOUTUBE_REDIRECT_URI,
+                )
+
+                access_token = decrypt_token(channel.oauth_access_token)
+                refresh_token = decrypt_token(channel.oauth_refresh_token)
+
+                video_id = await yt.upload_video(
+                    job.video_path,
+                    job.seo_title,
+                    job.seo_description,
+                    job.seo_tags,
+                    access_token,
+                    refresh_token,
+                    scheduled_time,
+                )
+
+                job.youtube_video_id = video_id
+                job.youtube_url = f"https://youtube.com/shorts/{video_id}"
+                job.status = "posted"
+                job.posted_at = datetime.now(timezone.utc)
+                await session.commit()
+                logger.info("Job %s posted via YouTube API (video_id=%s)", job_id, video_id)
 
         except Exception as exc:
             logger.exception("Upload failed for job %s: %s", job_id, exc)
