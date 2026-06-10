@@ -238,7 +238,7 @@ export default function ScheduleConfig({
                         <button
                           type="button"
                           onClick={() => removeTopic(topic)}
-                          className="text-muted-foreground hover:text-red-400 transition-colors"
+                          className="text-muted-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -278,13 +278,13 @@ export default function ScheduleConfig({
 
       {/* Error / Success */}
       {error && (
-        <div className="bg-red-900/20 border border-red-800/40 rounded-lg px-4 py-3">
-          <p className="text-red-400 text-sm">{error}</p>
+        <div className="bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800/40 rounded-lg px-4 py-3">
+          <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
         </div>
       )}
       {success && (
-        <div className="bg-green-900/20 border border-green-800/40 rounded-lg px-4 py-3">
-          <p className="text-green-400 text-sm">Schedule saved successfully!</p>
+        <div className="bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800/40 rounded-lg px-4 py-3">
+          <p className="text-green-600 dark:text-green-400 text-sm">Schedule saved successfully!</p>
         </div>
       )}
 

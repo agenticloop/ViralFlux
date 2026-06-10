@@ -66,8 +66,8 @@ export default function DashboardPage() {
               value={formatNumber(stats?.videos_posted ?? 0)}
               change={stats?.videos_change_pct}
               changeLabel="vs last month"
-              iconColor="text-purple-400"
-              iconBg="bg-purple-900/20"
+              iconColor="text-purple-600 dark:text-purple-400"
+              iconBg="bg-purple-100 dark:bg-purple-900/20"
             />
             <StatsCard
               icon={Eye}
@@ -75,8 +75,8 @@ export default function DashboardPage() {
               value={formatNumber(stats?.total_views ?? 0)}
               change={stats?.views_change_pct}
               changeLabel="vs last month"
-              iconColor="text-blue-400"
-              iconBg="bg-blue-900/20"
+              iconColor="text-blue-600 dark:text-blue-400"
+              iconBg="bg-blue-100 dark:bg-blue-900/20"
             />
             <StatsCard
               icon={DollarSign}
@@ -84,8 +84,8 @@ export default function DashboardPage() {
               value={formatCost(stats?.cost_this_month ?? 0)}
               change={stats?.cost_change_pct}
               changeLabel="vs last month"
-              iconColor="text-green-400"
-              iconBg="bg-green-900/20"
+              iconColor="text-green-600 dark:text-green-400"
+              iconBg="bg-green-100 dark:bg-green-900/20"
             />
             <StatsCard
               icon={Tv2}
@@ -197,7 +197,7 @@ export default function DashboardPage() {
                   <div key={item.id} className="flex items-start gap-2 py-2">
                     <div className="mt-0.5">
                       {item.type === "video_failed" ? (
-                        <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                        <AlertCircle className="w-3.5 h-3.5 text-red-500 dark:text-red-400" />
                       ) : item.type === "video_posted" ? (
                         <div className="w-3.5 h-3.5 rounded-full bg-green-400/20 flex items-center justify-center">
                           <div className="w-1.5 h-1.5 rounded-full bg-green-400" />

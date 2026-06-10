@@ -136,7 +136,7 @@ export default function VideoDetailPage() {
               </Button>
               <Button
                 variant="outline"
-                className="w-full border-red-800/40 text-red-400 hover:bg-red-900/10 flex items-center gap-2"
+                className="w-full border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800/40 dark:text-red-400 dark:hover:bg-red-900/10 flex items-center gap-2"
                 onClick={handleReject}
                 disabled={isRejecting}
               >
@@ -183,7 +183,7 @@ export default function VideoDetailPage() {
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-3">
               {video.cost_usd !== null && (
                 <span className="flex items-center gap-1.5">
-                  <DollarSign className="w-3.5 h-3.5 text-green-400" />
+                  <DollarSign className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
                   {formatCost(video.cost_usd)} cost
                 </span>
               )}
@@ -193,7 +193,7 @@ export default function VideoDetailPage() {
               </span>
               {video.posted_at && (
                 <span className="flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-green-400" />
+                  <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
                   Posted {formatDate(video.posted_at)}
                 </span>
               )}
@@ -256,11 +256,11 @@ export default function VideoDetailPage() {
 
           {/* Error message */}
           {video.error_message && (
-            <div className="bg-red-900/20 border border-red-800/40 rounded-xl p-5">
-              <h3 className="text-red-400 font-semibold mb-2">
+            <div className="bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800/40 rounded-xl p-5">
+              <h3 className="text-red-700 dark:text-red-400 font-semibold mb-2">
                 Error Details
               </h3>
-              <p className="text-red-300/80 text-sm font-mono">
+              <p className="text-red-600/80 dark:text-red-300/80 text-sm font-mono">
                 {video.error_message}
               </p>
             </div>

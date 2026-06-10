@@ -16,48 +16,48 @@ const features = [
     title: "Multi-Channel Management",
     description:
       "Run multiple YouTube channels from one dashboard. Set unique formats, voices, and schedules per channel.",
-    color: "text-purple-400",
-    bg: "bg-purple-900/10 border-purple-900/20",
+    color: "text-purple-600 dark:text-purple-400",
+    bg: "bg-purple-50 border-purple-200 dark:bg-purple-900/10 dark:border-purple-900/20",
   },
   {
     icon: Brain,
     title: "AI Story Engine",
     description:
       "Powered by Google Gemini. Generates hooks, story arcs, and endings optimized for Shorts retention.",
-    color: "text-blue-400",
-    bg: "bg-blue-900/10 border-blue-900/20",
+    color: "text-blue-600 dark:text-blue-400",
+    bg: "bg-blue-50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-900/20",
   },
   {
     icon: Youtube,
     title: "Auto YouTube Posting",
     description:
       "Direct OAuth integration. Videos upload with full SEO metadata — title, description, tags, thumbnail.",
-    color: "text-red-400",
-    bg: "bg-red-900/10 border-red-900/20",
+    color: "text-red-600 dark:text-red-400",
+    bg: "bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-900/20",
   },
   {
     icon: TrendingUp,
     title: "Trend Detection",
     description:
       "Scans Reddit, Twitter, and viral content daily to surface the highest-potential topics for your niche.",
-    color: "text-orange-400",
-    bg: "bg-orange-900/10 border-orange-900/20",
+    color: "text-orange-600 dark:text-orange-400",
+    bg: "bg-orange-50 border-orange-200 dark:bg-orange-900/10 dark:border-orange-900/20",
   },
   {
     icon: DollarSign,
     title: "Cost Tracking",
     description:
       "See exactly what each Short costs — down to the cent. Average cost under $0.10. Budget alerts built in.",
-    color: "text-green-400",
-    bg: "bg-green-900/10 border-green-900/20",
+    color: "text-green-600 dark:text-green-400",
+    bg: "bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-900/20",
   },
   {
     icon: BarChart3,
     title: "Full Analytics",
     description:
       "Views, CTR, retention, and cost-per-view across all channels. Know what's working and double down.",
-    color: "text-yellow-400",
-    bg: "bg-yellow-900/10 border-yellow-900/20",
+    color: "text-yellow-600 dark:text-yellow-400",
+    bg: "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/10 dark:border-yellow-900/20",
   },
 ]
 
@@ -95,7 +95,7 @@ export default function Features() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.08 }}
-                className={`p-6 rounded-xl border ${feature.bg} hover:border-opacity-60 transition-all duration-300 group cursor-default`}
+                className={`p-6 rounded-xl border ${feature.bg} hover:shadow-md dark:hover:shadow-none transition-all duration-300 group cursor-default`}
               >
                 <div className="mb-4">
                   <div

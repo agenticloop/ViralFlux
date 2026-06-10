@@ -110,7 +110,7 @@ export default function VideoCard({ video, channelName }: VideoCardProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-green-400 hover:bg-green-900/20 h-8 px-3"
+                className="text-green-600 hover:bg-green-100 dark:text-green-400 dark:hover:bg-green-900/20 h-8 px-3"
                 onClick={handleApprove}
               >
                 <Check className="w-3 h-3" />
@@ -118,7 +118,7 @@ export default function VideoCard({ video, channelName }: VideoCardProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-red-400 hover:bg-red-900/20 h-8 px-3"
+                className="text-red-600 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/20 h-8 px-3"
                 onClick={handleReject}
               >
                 <X className="w-3 h-3" />

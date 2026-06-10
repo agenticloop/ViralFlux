@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { Zap, Youtube, Twitter, Linkedin } from "lucide-react"
+import { Youtube, Twitter, Linkedin } from "lucide-react"
+import { Logo } from "@/components/shared/Logo"
 
 const footerLinks = {
   Product: [
@@ -14,8 +15,8 @@ const footerLinks = {
     { label: "Contact", href: "#" },
   ],
   Legal: [
-    { label: "Privacy Policy", href: "#" },
-    { label: "Terms of Service", href: "#" },
+    { label: "Privacy Policy", href: "/privacy" },
+    { label: "Terms of Service", href: "/terms" },
     { label: "Cookie Policy", href: "#" },
   ],
 }
@@ -27,12 +28,9 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-[#E5192A] flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white fill-white" />
-              </div>
-              <span className="text-foreground font-bold text-xl">ViralFlux</span>
-            </Link>
+            <div className="mb-4">
+              <Logo href="/" size="md" />
+            </div>
             <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
               AI-powered YouTube Shorts automation. Generate, voice, and post
               viral content automatically — under $0.10 per video.

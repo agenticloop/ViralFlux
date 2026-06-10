@@ -11,8 +11,8 @@ const steps = [
     title: "AI Picks Topic",
     description:
       "Our AI analyzes Reddit trends, viral patterns, and niche signals to pick a winning topic automatically — or you can specify one.",
-    color: "text-purple-400",
-    bg: "bg-purple-900/20 border-purple-800/30",
+    color: "text-purple-600 dark:text-purple-400",
+    bg: "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800/30",
   },
   {
     icon: PenLine,
@@ -21,8 +21,8 @@ const steps = [
     title: "Script Written",
     description:
       "Gemini AI crafts a suspense-filled 60-second story with a powerful hook designed for maximum viewer retention.",
-    color: "text-blue-400",
-    bg: "bg-blue-900/20 border-blue-800/30",
+    color: "text-blue-600 dark:text-blue-400",
+    bg: "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/30",
   },
   {
     icon: Video,
@@ -31,8 +31,8 @@ const steps = [
     title: "Video Built",
     description:
       "ElevenLabs voice narration + matching visuals + auto-generated captions + background music — fully assembled in minutes.",
-    color: "text-yellow-400",
-    bg: "bg-yellow-900/20 border-yellow-800/30",
+    color: "text-amber-600 dark:text-yellow-400",
+    bg: "bg-amber-50 border-amber-200 dark:bg-yellow-900/20 dark:border-yellow-800/30",
   },
   {
     icon: Upload,
@@ -41,8 +41,8 @@ const steps = [
     title: "Posted to YouTube",
     description:
       "Your Short goes live with optimized title, description, and tags. Scheduled for peak engagement times automatically.",
-    color: "text-green-400",
-    bg: "bg-green-900/20 border-green-800/30",
+    color: "text-green-600 dark:text-green-400",
+    bg: "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800/30",
   },
 ]
 

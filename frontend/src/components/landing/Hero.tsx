@@ -44,7 +44,7 @@ function MockDashboard() {
           ].map(({ icon: Icon, label, value }) => (
             <div key={label} className="bg-card rounded-lg p-3 border border-border">
               <Icon className="w-3 h-3 text-[#E5192A] mb-1" />
-              <div className="text-white text-sm font-bold">{value}</div>
+              <div className="text-foreground text-sm font-bold">{value}</div>
               <div className="text-muted-foreground text-xs">{label}</div>
             </div>
           ))}
@@ -68,10 +68,10 @@ function MockDashboard() {
               <span
                 className={`text-xs px-2 py-0.5 rounded-full ${
                   video.status === "posted"
-                    ? "bg-green-900/40 text-green-400"
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
                     : video.status === "generating"
-                    ? "bg-yellow-900/40 text-yellow-400"
-                    : "bg-zinc-800 text-zinc-400"
+                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400"
+                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
                 }`}
               >
                 {video.status}

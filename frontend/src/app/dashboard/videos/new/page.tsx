@@ -262,12 +262,12 @@ export default function NewVideoPage() {
         </div>
 
         {/* Cost Estimate */}
-        <div className="flex items-center gap-3 p-3 bg-green-900/10 border border-green-900/20 rounded-lg">
-          <DollarSign className="w-5 h-5 text-green-400" />
+        <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 dark:bg-green-900/10 dark:border-green-900/20 rounded-lg">
+          <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
           <div>
             <p className="text-foreground text-sm">
               Estimated cost:{" "}
-              <strong className="text-green-400">
+              <strong className="text-green-600 dark:text-green-400">
                 ~${estimatedCost.toFixed(2)}
               </strong>
             </p>
@@ -279,8 +279,8 @@ export default function NewVideoPage() {
 
         {/* Error */}
         {error && (
-          <div className="bg-red-900/20 border border-red-800/40 rounded-lg px-4 py-3">
-            <p className="text-red-400 text-sm">{error}</p>
+          <div className="bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800/40 rounded-lg px-4 py-3">
+            <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
           </div>
         )}
 

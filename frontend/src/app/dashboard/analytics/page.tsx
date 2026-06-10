@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTheme } from "next-themes"
 import { useQuery } from "@tanstack/react-query"
 import {
   LineChart,
@@ -56,6 +57,16 @@ const FORMAT_DATA = [
 
 export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState(30)
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
+  const chart = {
+    grid: isDark ? "#1A1A1A" : "#E5E5E5",
+    axis: isDark ? "#555555" : "#AAAAAA",
+    tick: isDark ? "#888888" : "#666666",
+    tooltipBg: isDark ? "#111111" : "#FFFFFF",
+    tooltipBorder: isDark ? "#222222" : "#E5E5E5",
+    tooltipText: isDark ? "#FAFAFA" : "#111111",
+  }
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ["dashboard-stats"],
@@ -113,24 +124,24 @@ export default function AnalyticsPage() {
               label="Total Views"
               value={formatNumber(stats?.total_views ?? 0)}
               change={stats?.views_change_pct}
-              iconColor="text-blue-400"
-              iconBg="bg-blue-900/20"
+              iconColor="text-blue-600 dark:text-blue-400"
+              iconBg="bg-blue-100 dark:bg-blue-900/20"
             />
             <StatsCard
               icon={Video}
               label="Videos Posted"
               value={formatNumber(stats?.videos_posted ?? 0)}
               change={stats?.videos_change_pct}
-              iconColor="text-purple-400"
-              iconBg="bg-purple-900/20"
+              iconColor="text-purple-600 dark:text-purple-400"
+              iconBg="bg-purple-100 dark:bg-purple-900/20"
             />
             <StatsCard
               icon={DollarSign}
               label="Total Spend"
               value={formatCost(stats?.cost_this_month ?? 0)}
               change={stats?.cost_change_pct}
-              iconColor="text-green-400"
-              iconBg="bg-green-900/20"
+              iconColor="text-green-600 dark:text-green-400"
+              iconBg="bg-green-100 dark:bg-green-900/20"
             />
             <StatsCard
               icon={TrendingUp}
@@ -160,24 +171,24 @@ export default function AnalyticsPage() {
           </h3>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
+              <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
               <XAxis
                 dataKey="date"
-                stroke="#555555"
-                tick={{ fill: "#888888", fontSize: 10 }}
+                stroke={chart.axis}
+                tick={{ fill: chart.tick, fontSize: 10 }}
                 interval={Math.floor(dateRange / 7)}
               />
               <YAxis
-                stroke="#555555"
-                tick={{ fill: "#888888", fontSize: 10 }}
+                stroke={chart.axis}
+                tick={{ fill: chart.tick, fontSize: 10 }}
                 tickFormatter={formatNumber}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#111111",
-                  border: "1px solid #222222",
+                  backgroundColor: chart.tooltipBg,
+                  border: `1px solid ${chart.tooltipBorder}`,
                   borderRadius: "8px",
-                  color: "#FAFAFA",
+                  color: chart.tooltipText,
                   fontSize: "12px",
                 }}
               />
@@ -198,25 +209,25 @@ export default function AnalyticsPage() {
           <h3 className="text-foreground font-bold mb-4">Videos by Format</h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={FORMAT_DATA} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
+              <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
               <XAxis
                 type="number"
-                stroke="#555555"
-                tick={{ fill: "#888888", fontSize: 10 }}
+                stroke={chart.axis}
+                tick={{ fill: chart.tick, fontSize: 10 }}
               />
               <YAxis
                 type="category"
                 dataKey="format"
-                stroke="#555555"
-                tick={{ fill: "#888888", fontSize: 10 }}
+                stroke={chart.axis}
+                tick={{ fill: chart.tick, fontSize: 10 }}
                 width={70}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#111111",
-                  border: "1px solid #222222",
+                  backgroundColor: chart.tooltipBg,
+                  border: `1px solid ${chart.tooltipBorder}`,
                   borderRadius: "8px",
-                  color: "#FAFAFA",
+                  color: chart.tooltipText,
                   fontSize: "12px",
                 }}
               />
@@ -233,24 +244,24 @@ export default function AnalyticsPage() {
         </h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
             <XAxis
               dataKey="date"
-              stroke="#555555"
-              tick={{ fill: "#888888", fontSize: 10 }}
+              stroke={chart.axis}
+              tick={{ fill: chart.tick, fontSize: 10 }}
               interval={Math.floor(dateRange / 7)}
             />
             <YAxis
-              stroke="#555555"
-              tick={{ fill: "#888888", fontSize: 10 }}
+              stroke={chart.axis}
+              tick={{ fill: chart.tick, fontSize: 10 }}
               tickFormatter={(v) => `$${v}`}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "#111111",
-                border: "1px solid #222222",
+                backgroundColor: chart.tooltipBg,
+                border: `1px solid ${chart.tooltipBorder}`,
                 borderRadius: "8px",
-                color: "#FAFAFA",
+                color: chart.tooltipText,
                 fontSize: "12px",
               }}
               formatter={(v: number) => [`$${v}`, "Cost"]}
@@ -263,7 +274,7 @@ export default function AnalyticsPage() {
       {/* Top Videos */}
       <div className="bg-card border border-border rounded-xl p-5">
         <h3 className="text-foreground font-bold mb-4 flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-yellow-400" />
+          <Trophy className="w-4 h-4 text-yellow-500 dark:text-yellow-400" />
           Top Performing Videos
         </h3>
         {videosLoading ? (

@@ -35,10 +35,10 @@ export default function StatsCard({
             className={cn(
               "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
               isPositive &&
-                "bg-green-900/20 text-green-400 border border-green-800/30",
+                "bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/30",
               isNegative &&
-                "bg-red-900/20 text-red-400 border border-red-800/30",
-              isNeutral && "bg-zinc-800 text-zinc-400"
+                "bg-red-100 text-red-600 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/30",
+              isNeutral && "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
             )}
           >
             {isPositive && <TrendingUp className="w-3 h-3" />}

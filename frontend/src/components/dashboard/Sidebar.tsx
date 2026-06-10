@@ -154,7 +154,7 @@ export default function Sidebar() {
         <button
           onClick={() => logout()}
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-lg w-full text-muted-foreground hover:text-red-400 hover:bg-red-900/10 transition-all",
+            "flex items-center gap-3 px-3 py-2 rounded-lg w-full text-muted-foreground hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all",
             sidebarCollapsed && "justify-center"
           )}
           title={sidebarCollapsed ? "Logout" : undefined}

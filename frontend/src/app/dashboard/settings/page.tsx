@@ -55,7 +55,7 @@ function CopyButton({ text }: { text: string }) {
       className="text-muted-foreground hover:text-foreground transition-colors p-1"
     >
       {copied ? (
-        <Check className="w-4 h-4 text-green-400" />
+        <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
       ) : (
         <Copy className="w-4 h-4" />
       )}
@@ -154,10 +154,10 @@ export default function SettingsPage() {
           </div>
 
           {profileError && (
-            <p className="text-red-400 text-sm">{profileError}</p>
+            <p className="text-red-600 dark:text-red-400 text-sm">{profileError}</p>
           )}
           {profileSuccess && (
-            <p className="text-green-400 text-sm">Profile updated!</p>
+            <p className="text-green-600 dark:text-green-400 text-sm">Profile updated!</p>
           )}
 
           <Button type="submit" variant="red" size="sm" disabled={profileLoading}>
@@ -198,10 +198,10 @@ export default function SettingsPage() {
           </div>
 
           {passwordError && (
-            <p className="text-red-400 text-sm">{passwordError}</p>
+            <p className="text-red-600 dark:text-red-400 text-sm">{passwordError}</p>
           )}
           {passwordSuccess && (
-            <p className="text-green-400 text-sm">Password changed!</p>
+            <p className="text-green-600 dark:text-green-400 text-sm">Password changed!</p>
           )}
 
           <Button type="submit" variant="outline" size="sm"

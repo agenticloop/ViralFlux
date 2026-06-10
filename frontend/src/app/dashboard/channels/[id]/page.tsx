@@ -68,8 +68,8 @@ export default function ChannelDetailPage() {
             <span
               className={`text-xs px-2 py-0.5 rounded-full border flex items-center gap-1 ${
                 channel.youtube_channel_id
-                  ? "bg-green-900/20 text-green-400 border-green-800/30"
-                  : "bg-zinc-800 text-zinc-400 border-zinc-700"
+                  ? "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/30"
+                  : "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700"
               }`}
             >
               <Youtube className="w-3 h-3" />

@@ -80,4 +80,20 @@
   .text-balance { text-wrap: balance; }
   .glow-red { box-shadow: 0 0 20px rgba(229, 25, 42, 0.3); }
   .glow-red-lg { box-shadow: 0 0 60px rgba(229, 25, 42, 0.2), 0 0 120px rgba(229, 25, 42, 0.1); }
+
+  /* Gradient text — works on both light and dark */
+  .text-gradient-red {
+    background: linear-gradient(135deg, #E5192A 0%, #FF6060 60%, #E5192A 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Light-mode card elevation */
+  .card-shadow {
+    @apply shadow-sm dark:shadow-none;
+  }
+  .card-shadow-md {
+    @apply shadow-md dark:shadow-none;
+  }
 }

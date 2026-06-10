@@ -250,11 +250,11 @@ export default function GenerateModal() {
 
           {/* Cost estimate */}
           <div className="flex items-center gap-2 p-3 bg-background rounded-lg border border-border">
-            <DollarSign className="w-4 h-4 text-green-400" />
+            <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
             <div>
               <span className="text-foreground text-sm">
                 Estimated cost:{" "}
-                <strong className="text-green-400">
+                <strong className="text-green-600 dark:text-green-400">
                   ~${estimatedCost.toFixed(2)}
                 </strong>
               </span>
@@ -266,8 +266,8 @@ export default function GenerateModal() {
 
           {/* Error */}
           {error && (
-            <div className="bg-red-900/20 border border-red-800/40 rounded-lg px-4 py-3">
-              <p className="text-red-400 text-sm">{error}</p>
+            <div className="bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800/40 rounded-lg px-4 py-3">
+              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
             </div>
           )}
 

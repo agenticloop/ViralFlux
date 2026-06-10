@@ -100,8 +100,8 @@ export default function PricingSection() {
               transition={{ duration: 0.4, delay: i * 0.1 }}
               className={`relative rounded-2xl p-8 border transition-all duration-300 ${
                 plan.popular
-                  ? "border-[#E5192A] bg-gradient-to-b from-[#E5192A]/5 to-[#111111] shadow-xl shadow-red-900/20"
-                  : "border-border bg-card hover:border-border"
+                  ? "border-[#E5192A] bg-gradient-to-b from-[#E5192A]/8 to-card shadow-xl shadow-[#E5192A]/10"
+                  : "border-border bg-card hover:border-border hover:shadow-md dark:hover:shadow-none"
               }`}
             >
               {plan.popular && (

@@ -226,8 +226,8 @@ export default function ChannelsPage() {
             </div>
 
             {createError && (
-              <div className="bg-red-900/20 border border-red-800/40 rounded-lg px-4 py-3">
-                <p className="text-red-400 text-sm">{createError}</p>
+              <div className="bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800/40 rounded-lg px-4 py-3">
+                <p className="text-red-600 dark:text-red-400 text-sm">{createError}</p>
               </div>
             )}
 
