@@ -15,6 +15,7 @@ import {
   LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Logo } from "@/components/shared/Logo"
 import { useUIStore } from "@/store/uiStore"
 import { useAuthStore } from "@/store/authStore"
 import { getInitials } from "@/lib/utils"
@@ -66,9 +67,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="flex items-center h-16 px-4 border-b border-border">
         <Link href="/dashboard" className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-[#E5192A] flex items-center justify-center flex-shrink-0">
-            <Zap className="w-4 h-4 text-white fill-white" />
-          </div>
+          <Logo href="/dashboard" size="md" showWordmark={false} />
           <AnimatePresence>
             {!sidebarCollapsed && (
               <motion.span

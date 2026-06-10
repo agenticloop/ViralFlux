@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Zap } from "lucide-react"
+import { Logo } from "@/components/shared/Logo"
 
 export default function AuthLayout({
   children,
@@ -11,15 +11,7 @@ export default function AuthLayout({
       {/* Background glow */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#E5192A]/5 rounded-full blur-[100px] pointer-events-none" />
 
-      {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 mb-8 group">
-        <div className="w-9 h-9 rounded-xl bg-[#E5192A] flex items-center justify-center group-hover:bg-[#C01020] transition-colors">
-          <Zap className="w-5 h-5 text-white fill-white" />
-        </div>
-        <span className="text-foreground font-bold text-2xl tracking-tight">
-          ViralFlux
-        </span>
-      </Link>
+      <Logo href="/" size="lg" className="mb-8" />
 
       {/* Card */}
       <div className="relative w-full max-w-md">

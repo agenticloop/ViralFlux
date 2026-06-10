@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { Menu, X, Zap } from "lucide-react"
+import { Menu, X } from "lucide-react"
+import { Logo } from "@/components/shared/Logo"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/shared/ThemeToggle"
 import { cn } from "@/lib/utils"
@@ -36,14 +37,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-[#E5192A] flex items-center justify-center group-hover:bg-[#C01020] transition-colors">
-              <Zap className="w-5 h-5 text-white fill-white" />
-            </div>
-            <span className="text-foreground font-bold text-xl tracking-tight">
-              ViralFlux
-            </span>
-          </Link>
+          <Logo href="/" size="md" />
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8">

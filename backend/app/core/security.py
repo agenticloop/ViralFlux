@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import random
 import string
 from datetime import datetime, timedelta, timezone
@@ -14,12 +15,18 @@ from app.core.config import settings
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+def _prehash(password: str) -> str:
+    """SHA-256 prehash so bcrypt never sees >72 bytes regardless of input length."""
+    digest = hashlib.sha256(password.encode()).digest()
+    return base64.b64encode(digest).decode()
+
+
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return pwd_context.hash(_prehash(password))
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return pwd_context.verify(_prehash(plain), hashed)
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
