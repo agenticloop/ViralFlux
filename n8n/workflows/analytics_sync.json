@@ -1,0 +1,204 @@
+{
+  "id": "workflow-analytics-sync",
+  "name": "Analytics Sync",
+  "active": false,
+  "settings": {
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodes": [
+    {
+      "id": "node-cron-2am",
+      "name": "Daily 2 AM",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyDay",
+              "hour": 2,
+              "minute": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-trigger-sync",
+      "name": "Trigger Analytics Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/v1/webhooks/n8n/schedule-trigger",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $env.APP_SECRET_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"action\": \"sync_analytics\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "node-check-sync-response",
+      "name": "Check Sync Response",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-sync-success",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-log-sync-success",
+      "name": "Log Sync Success",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [900, 220],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-result",
+              "name": "result",
+              "value": "success",
+              "type": "string"
+            },
+            {
+              "id": "assign-message",
+              "name": "message",
+              "value": "={{ $json.message || 'Analytics sync task queued successfully' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-task-id",
+              "name": "task_id",
+              "value": "={{ $json.task_id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-ran-at",
+              "name": "ran_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-log-sync-failure",
+      "name": "Log Sync Failure",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [900, 400],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-result",
+              "name": "result",
+              "value": "failed",
+              "type": "string"
+            },
+            {
+              "id": "assign-error",
+              "name": "error",
+              "value": "={{ $json.error || $json.detail || 'Unknown error from schedule-trigger endpoint' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-ran-at",
+              "name": "ran_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Daily 2 AM": {
+      "main": [
+        [
+          {
+            "node": "Trigger Analytics Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Analytics Sync": {
+      "main": [
+        [
+          {
+            "node": "Check Sync Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Sync Response": {
+      "main": [
+        [
+          {
+            "node": "Log Sync Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Sync Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

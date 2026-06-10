@@ -1,0 +1,264 @@
+{
+  "id": "workflow-scheduled-posting",
+  "name": "Scheduled Posting",
+  "active": false,
+  "settings": {
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodes": [
+    {
+      "id": "node-cron-trigger",
+      "name": "Every 30 Minutes",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 30,
+              "unit": "minutes"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-get-channels",
+      "name": "Get Active Channels",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "http://backend:8000/api/v1/channels",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $env.APP_SECRET_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "node-filter-due-channels",
+      "name": "Filter Due Channels",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Filter channels where:\n// 1. is_active == true\n// 2. schedule exists and schedule.is_enabled == true\n// 3. next post time is due (within the next 30 minutes)\n\nconst now = new Date();\nconst windowMs = 30 * 60 * 1000; // 30-minute window\n\nconst channels = $input.all().flatMap(item => {\n  // API may return { channels: [...] } or a plain array\n  const data = item.json;\n  if (Array.isArray(data)) return data;\n  if (data.channels && Array.isArray(data.channels)) return data.channels;\n  if (data.items && Array.isArray(data.items)) return data.items;\n  return [data];\n});\n\nconst dueChannels = channels.filter(ch => {\n  if (!ch.is_active) return false;\n  const sched = ch.schedule;\n  if (!sched || !sched.is_enabled) return false;\n\n  // next_post_at is an ISO string provided by the API\n  if (!sched.next_post_at) return false;\n\n  const nextPost = new Date(sched.next_post_at);\n  const diffMs = nextPost.getTime() - now.getTime();\n\n  // Due if within the next window OR already overdue (up to 30 min late)\n  return diffMs <= windowMs && diffMs >= -windowMs;\n});\n\nif (dueChannels.length === 0) {\n  // Return a sentinel so downstream nodes can see \"nothing to do\"\n  return [{ json: { due_count: 0, channels: [] } }];\n}\n\nreturn dueChannels.map(ch => ({ json: ch }));\n"
+      }
+    },
+    {
+      "id": "node-check-any-due",
+      "name": "Any Channels Due",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-has-channel-id",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-trigger-generation",
+      "name": "Trigger Video Generation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 220],
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/v1/videos/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $env.APP_SECRET_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel_id\": \"{{ $json.id }}\",\n  \"format_slug\": \"{{ $json.default_format || 'horror_story' }}\",\n  \"auto_topic\": {{ ($json.schedule && $json.schedule.auto_topic) ? 'true' : 'false' }}\n}",
+        "options": {
+          "timeout": 15000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 2000
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "node-log-results",
+      "name": "Log Results",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1340, 220],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-channel-id",
+              "name": "channel_id",
+              "value": "={{ $('Filter Due Channels').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-job-id",
+              "name": "job_id",
+              "value": "={{ $json.id || $json.job_id }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-status",
+              "name": "status",
+              "value": "={{ $json.status || 'queued' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-triggered-at",
+              "name": "triggered_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-nothing-due",
+      "name": "Nothing Due",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1120, 400],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-msg",
+              "name": "message",
+              "value": "No channels due for posting in this window",
+              "type": "string"
+            },
+            {
+              "id": "assign-checked-at",
+              "name": "checked_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Every 30 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Get Active Channels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Channels": {
+      "main": [
+        [
+          {
+            "node": "Filter Due Channels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Due Channels": {
+      "main": [
+        [
+          {
+            "node": "Any Channels Due",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any Channels Due": {
+      "main": [
+        [
+          {
+            "node": "Trigger Video Generation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing Due",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Video Generation": {
+      "main": [
+        [
+          {
+            "node": "Log Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

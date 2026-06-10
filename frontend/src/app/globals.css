@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 354 79% 52%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 53%;
+    --accent: 354 79% 60%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 354 79% 52%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 13%;
+    --input: 0 0% 13%;
+    --ring: 354 79% 52%;
+    --radius: 0.5rem;
+  }
+
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 4%;
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 4%;
+    --popover: 0 0% 98%;
+    --popover-foreground: 0 0% 4%;
+    --primary: 354 79% 52%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 354 79% 60%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 354 79% 52%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 354 79% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-color: #0A0A0A;
+    color: #FAFAFA;
+  }
+
+  .light body {
+    background-color: #FFFFFF;
+    color: #0A0A0A;
+  }
+
+  ::selection {
+    background-color: rgba(229, 25, 42, 0.3);
+    color: #FAFAFA;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0F0F0F;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #333333;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #E5192A;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .text-gradient-red {
+    background: linear-gradient(135deg, #E5192A, #FF3040, #FF6B6B);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glow-red {
+    box-shadow: 0 0 30px rgba(229, 25, 42, 0.3), 0 0 60px rgba(229, 25, 42, 0.1);
+  }
+
+  .glow-red-sm {
+    box-shadow: 0 0 10px rgba(229, 25, 42, 0.3);
+  }
+
+  .bg-gradient-hero {
+    background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(229, 25, 42, 0.15), transparent);
+  }
+
+  .card-dark {
+    background: #111111;
+    border: 1px solid #222222;
+  }
+
+  .card-dark-hover {
+    @apply card-dark transition-all duration-300;
+  }
+
+  .card-dark-hover:hover {
+    border-color: #E5192A;
+    box-shadow: 0 0 20px rgba(229, 25, 42, 0.1);
+  }
+
+  .shimmer-bg {
+    background: linear-gradient(90deg, #111111 0%, #1a1a1a 50%, #111111 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  .noise-bg {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  }
+}

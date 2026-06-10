@@ -1,0 +1,271 @@
+{
+  "id": "workflow-approval-reminder",
+  "name": "Approval Reminder",
+  "active": false,
+  "settings": {
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "nodes": [
+    {
+      "id": "node-cron-every-2h",
+      "name": "Every 2 Hours",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 2,
+              "unit": "hours"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-get-pending-jobs",
+      "name": "Get Pending Approval Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "http://backend:8000/api/v1/videos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $env.APP_SECRET_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "pending_approval"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "node-filter-stale-jobs",
+      "name": "Filter Stale Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Keep only jobs that have been pending_approval for more than 12 hours\n// and have not yet had a reminder sent recently.\n\nconst STALE_THRESHOLD_MS = 12 * 60 * 60 * 1000; // 12 hours\nconst now = new Date();\n\nconst allItems = $input.all();\n\n// API may return { items: [...] } or { videos: [...] } or a plain array\nconst jobs = allItems.flatMap(item => {\n  const data = item.json;\n  if (Array.isArray(data)) return data;\n  if (data.items && Array.isArray(data.items)) return data.items;\n  if (data.videos && Array.isArray(data.videos)) return data.videos;\n  if (data.results && Array.isArray(data.results)) return data.results;\n  // If it's a single job object with an id, include it\n  if (data.id) return [data];\n  return [];\n});\n\nconst staleJobs = jobs.filter(job => {\n  if (!job.created_at) return false;\n  const createdAt = new Date(job.created_at);\n  const ageMs = now.getTime() - createdAt.getTime();\n  return ageMs > STALE_THRESHOLD_MS;\n});\n\nif (staleJobs.length === 0) {\n  return [{ json: { stale_count: 0, message: 'No stale pending-approval jobs found' } }];\n}\n\nreturn staleJobs.map(job => ({ json: job }));\n"
+      }
+    },
+    {
+      "id": "node-check-stale-exists",
+      "name": "Any Stale Jobs",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-has-job-id",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-send-reminder",
+      "name": "Send Approval Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 220],
+      "parameters": {
+        "method": "POST",
+        "url": "=http://backend:8000/api/v1/videos/{{ $json.id }}/remind",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Webhook-Secret",
+              "value": "={{ $env.APP_SECRET_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"job_id\": \"{{ $json.id }}\",\n  \"channel_id\": \"{{ $json.channel_id }}\",\n  \"seo_title\": \"{{ $json.seo_title || '' }}\",\n  \"created_at\": \"{{ $json.created_at }}\"\n}",
+        "options": {
+          "timeout": 15000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 1000
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "node-log-reminders-sent",
+      "name": "Log Reminders Sent",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1340, 220],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-job-id",
+              "name": "job_id",
+              "value": "={{ $('Filter Stale Jobs').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-reminder-status",
+              "name": "reminder_status",
+              "value": "={{ $json.success ? 'sent' : 'failed' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-sent-at",
+              "name": "sent_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-no-stale-jobs",
+      "name": "No Stale Jobs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1120, 420],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-msg",
+              "name": "message",
+              "value": "={{ $json.message || 'No stale pending-approval jobs — no reminders needed' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-checked-at",
+              "name": "checked_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Every 2 Hours": {
+      "main": [
+        [
+          {
+            "node": "Get Pending Approval Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pending Approval Jobs": {
+      "main": [
+        [
+          {
+            "node": "Filter Stale Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Stale Jobs": {
+      "main": [
+        [
+          {
+            "node": "Any Stale Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any Stale Jobs": {
+      "main": [
+        [
+          {
+            "node": "Send Approval Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Stale Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Approval Reminder": {
+      "main": [
+        [
+          {
+            "node": "Log Reminders Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

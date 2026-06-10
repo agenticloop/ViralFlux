@@ -1,0 +1,64 @@
+import { LucideIcon, TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+interface StatsCardProps {
+  icon: LucideIcon
+  label: string
+  value: string
+  change?: number
+  changeLabel?: string
+  iconColor?: string
+  iconBg?: string
+}
+
+export default function StatsCard({
+  icon: Icon,
+  label,
+  value,
+  change,
+  changeLabel,
+  iconColor = "text-[#E5192A]",
+  iconBg = "bg-[#E5192A]/10",
+}: StatsCardProps) {
+  const isPositive = change !== undefined && change > 0
+  const isNegative = change !== undefined && change < 0
+  const isNeutral = change === 0
+
+  return (
+    <div className="bg-[#111111] border border-[#222222] rounded-xl p-5 hover:border-[#333333] transition-all duration-200">
+      <div className="flex items-start justify-between mb-4">
+        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", iconBg)}>
+          <Icon className={cn("w-5 h-5", iconColor)} />
+        </div>
+        {change !== undefined && (
+          <div
+            className={cn(
+              "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
+              isPositive &&
+                "bg-green-900/20 text-green-400 border border-green-800/30",
+              isNegative &&
+                "bg-red-900/20 text-red-400 border border-red-800/30",
+              isNeutral && "bg-zinc-800 text-zinc-400"
+            )}
+          >
+            {isPositive && <TrendingUp className="w-3 h-3" />}
+            {isNegative && <TrendingDown className="w-3 h-3" />}
+            {isNeutral && <Minus className="w-3 h-3" />}
+            <span>
+              {isPositive ? "+" : ""}
+              {change.toFixed(1)}%
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        <div className="text-2xl font-black text-[#FAFAFA]">{value}</div>
+        <div className="text-[#888888] text-sm">{label}</div>
+        {changeLabel && (
+          <div className="text-[#555555] text-xs">{changeLabel}</div>
+        )}
+      </div>
+    </div>
+  )
+}
