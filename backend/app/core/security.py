@@ -6,27 +6,24 @@ import random
 import string
 from datetime import datetime, timedelta, timezone
 
+import bcrypt as _bcrypt
 from cryptography.fernet import Fernet
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-
-def _prehash(password: str) -> str:
-    """SHA-256 prehash so bcrypt never sees >72 bytes regardless of input length."""
-    digest = hashlib.sha256(password.encode()).digest()
-    return base64.b64encode(digest).decode()
+def _prehash(password: str) -> bytes:
+    """SHA-256 prehash → 32 raw bytes; bcrypt never sees a string > 72 bytes."""
+    return hashlib.sha256(password.encode()).digest()
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(_prehash(password))
+    return _bcrypt.hashpw(_prehash(password), _bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(_prehash(plain), hashed)
+    return _bcrypt.checkpw(_prehash(plain), hashed.encode())
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
