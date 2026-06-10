@@ -67,14 +67,14 @@ const staticPosts = [
 
 export default function BlogPage() {
   return (
-    <div className="bg-[#0A0A0A] min-h-screen pt-24 pb-16">
+    <div className="bg-background min-h-screen pt-24 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl sm:text-5xl font-black text-[#FAFAFA] mb-4">
+          <h1 className="text-4xl sm:text-5xl font-black text-foreground mb-4">
             Creator Resources
           </h1>
-          <p className="text-[#888888] text-lg max-w-xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Strategy guides, automation tips, and YouTube Shorts playbooks from
             the ViralFlux team.
           </p>
@@ -85,7 +85,7 @@ export default function BlogPage() {
           {staticPosts.map((post) => (
             <article key={post.slug} className="group">
               <Link href={`/blog/${post.slug}`}>
-                <div className="bg-[#111111] border border-[#222222] rounded-xl p-6 hover:border-[#E5192A]/40 transition-all duration-300 h-full flex flex-col">
+                <div className="bg-card border border-border rounded-xl p-6 hover:border-[#E5192A]/40 transition-all duration-300 h-full flex flex-col">
                   {/* Tags */}
                   <div className="flex gap-2 mb-4">
                     {post.tags.map((tag) => (
@@ -100,17 +100,17 @@ export default function BlogPage() {
                   </div>
 
                   {/* Title */}
-                  <h2 className="text-[#FAFAFA] font-bold text-lg leading-tight mb-3 group-hover:text-[#E5192A] transition-colors flex-1">
+                  <h2 className="text-foreground font-bold text-lg leading-tight mb-3 group-hover:text-[#E5192A] transition-colors flex-1">
                     {post.title}
                   </h2>
 
                   {/* Excerpt */}
-                  <p className="text-[#666666] text-sm leading-relaxed mb-4">
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                     {post.excerpt}
                   </p>
 
                   {/* Meta */}
-                  <div className="flex items-center gap-3 text-xs text-[#555555]">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <Clock className="w-3 h-3" />
                     <span>{post.readingTime} min read</span>
                     <span>&bull;</span>

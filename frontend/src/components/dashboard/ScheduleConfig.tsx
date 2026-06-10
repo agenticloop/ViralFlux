@@ -108,10 +108,10 @@ export default function ScheduleConfig({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Enable Schedule */}
-      <div className="flex items-center justify-between p-4 bg-[#1A1A1A] rounded-xl border border-[#222222]">
+      <div className="flex items-center justify-between p-4 bg-muted rounded-xl border border-border">
         <div>
-          <p className="text-[#FAFAFA] font-semibold">Enable Auto-Schedule</p>
-          <p className="text-[#666666] text-sm">
+          <p className="text-foreground font-semibold">Enable Auto-Schedule</p>
+          <p className="text-muted-foreground text-sm">
             Automatically generate and post Shorts on a schedule
           </p>
         </div>
@@ -177,10 +177,10 @@ export default function ScheduleConfig({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[#FAFAFA] text-sm font-medium">
+                <p className="text-foreground text-sm font-medium">
                   Require Approval
                 </p>
-                <p className="text-[#666666] text-xs">
+                <p className="text-muted-foreground text-xs">
                   Review videos before they go live
                 </p>
               </div>
@@ -206,10 +206,10 @@ export default function ScheduleConfig({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[#FAFAFA] text-sm font-medium">
+                <p className="text-foreground text-sm font-medium">
                   AI Auto-Topic
                 </p>
-                <p className="text-[#666666] text-xs">
+                <p className="text-muted-foreground text-xs">
                   Let AI pick trending topics automatically
                 </p>
               </div>
@@ -229,16 +229,16 @@ export default function ScheduleConfig({
                     {topicQueue.map((topic, i) => (
                       <div
                         key={i}
-                        className="flex items-center gap-2 bg-[#1A1A1A] rounded-lg px-3 py-2"
+                        className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2"
                       >
-                        <span className="text-[#888888] text-xs w-5">{i + 1}.</span>
-                        <span className="text-[#FAFAFA] text-sm flex-1 truncate">
+                        <span className="text-muted-foreground text-xs w-5">{i + 1}.</span>
+                        <span className="text-foreground text-sm flex-1 truncate">
                           {topic}
                         </span>
                         <button
                           type="button"
                           onClick={() => removeTopic(topic)}
-                          className="text-[#555555] hover:text-red-400 transition-colors"
+                          className="text-muted-foreground hover:text-red-400 transition-colors"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -265,7 +265,7 @@ export default function ScheduleConfig({
                     variant="outline"
                     size="sm"
                     onClick={addTopic}
-                    className="border-[#333333] text-[#888888]"
+                    className="border-border text-muted-foreground"
                   >
                     <Plus className="w-4 h-4" />
                   </Button>

@@ -68,7 +68,7 @@ const plans = [
 
 export default function PricingSection() {
   return (
-    <section id="pricing" className="py-20 bg-[#0F0F0F]">
+    <section id="pricing" className="py-20 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -80,11 +80,11 @@ export default function PricingSection() {
           <span className="text-[#E5192A] text-sm font-semibold uppercase tracking-wider mb-3 block">
             Pricing
           </span>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#FAFAFA] mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground mb-4">
             Simple,{" "}
             <span className="text-gradient-red">Transparent</span> Pricing
           </h2>
-          <p className="text-[#888888] text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             Start free. Scale when you&apos;re ready. Cancel anytime.
           </p>
         </motion.div>
@@ -101,7 +101,7 @@ export default function PricingSection() {
               className={`relative rounded-2xl p-8 border transition-all duration-300 ${
                 plan.popular
                   ? "border-[#E5192A] bg-gradient-to-b from-[#E5192A]/5 to-[#111111] shadow-xl shadow-red-900/20"
-                  : "border-[#222222] bg-[#111111] hover:border-[#333333]"
+                  : "border-border bg-card hover:border-border"
               }`}
             >
               {plan.popular && (
@@ -113,24 +113,24 @@ export default function PricingSection() {
               )}
 
               <div className="mb-6">
-                <h3 className="text-[#FAFAFA] font-bold text-xl mb-1">
+                <h3 className="text-foreground font-bold text-xl mb-1">
                   {plan.name}
                 </h3>
-                <p className="text-[#666666] text-sm mb-4">{plan.tagline}</p>
+                <p className="text-muted-foreground text-sm mb-4">{plan.tagline}</p>
                 <div className="flex items-end gap-1">
-                  <span className="text-4xl font-black text-[#FAFAFA]">
+                  <span className="text-4xl font-black text-foreground">
                     ${plan.price}
                   </span>
-                  <span className="text-[#666666] text-sm mb-1">/month</span>
+                  <span className="text-muted-foreground text-sm mb-1">/month</span>
                 </div>
                 {plan.shorts && (
-                  <p className="text-[#888888] text-sm mt-1">
+                  <p className="text-muted-foreground text-sm mt-1">
                     {plan.shorts} Shorts &bull; {plan.channels} channel
                     {(plan.channels ?? 0) > 1 ? "s" : ""}
                   </p>
                 )}
                 {!plan.shorts && (
-                  <p className="text-[#888888] text-sm mt-1">
+                  <p className="text-muted-foreground text-sm mt-1">
                     Unlimited Shorts & channels
                   </p>
                 )}
@@ -140,7 +140,7 @@ export default function PricingSection() {
                 variant={plan.popular ? "red" : "outline"}
                 className={`w-full mb-6 ${
                   !plan.popular &&
-                  "border-[#333333] text-[#FAFAFA] hover:border-[#E5192A]"
+                  "border-border text-foreground hover:border-[#E5192A]"
                 }`}
                 asChild
               >
@@ -153,7 +153,7 @@ export default function PricingSection() {
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2 text-sm">
                     <Check className="w-4 h-4 text-[#E5192A] mt-0.5 flex-shrink-0" />
-                    <span className="text-[#CCCCCC]">{feature}</span>
+                    <span className="text-muted-foreground/70">{feature}</span>
                   </li>
                 ))}
               </ul>
@@ -165,7 +165,7 @@ export default function PricingSection() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="text-center text-[#555555] text-sm mt-8"
+          className="text-center text-muted-foreground text-sm mt-8"
         >
           All plans include a free trial with 3 Shorts. No credit card required.
         </motion.p>

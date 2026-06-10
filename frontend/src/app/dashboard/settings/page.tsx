@@ -52,7 +52,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="text-[#666666] hover:text-[#FAFAFA] transition-colors p-1"
+      className="text-muted-foreground hover:text-foreground transition-colors p-1"
     >
       {copied ? (
         <Check className="w-4 h-4 text-green-400" />
@@ -132,10 +132,10 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl space-y-6">
       {/* Profile Section */}
-      <div className="bg-[#111111] border border-[#222222] rounded-xl p-6">
+      <div className="bg-card border border-border rounded-xl p-6">
         <div className="flex items-center gap-2 mb-5">
           <User className="w-5 h-5 text-[#E5192A]" />
-          <h2 className="text-[#FAFAFA] font-bold text-lg">Profile</h2>
+          <h2 className="text-foreground font-bold text-lg">Profile</h2>
         </div>
 
         <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
@@ -170,7 +170,7 @@ export default function SettingsPage() {
         <Separator className="my-5" />
 
         {/* Change Password */}
-        <h3 className="text-[#FAFAFA] font-semibold mb-4">Change Password</h3>
+        <h3 className="text-foreground font-semibold mb-4">Change Password</h3>
         <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
           <div className="space-y-1.5">
             <Label>Current Password</Label>
@@ -205,7 +205,7 @@ export default function SettingsPage() {
           )}
 
           <Button type="submit" variant="outline" size="sm"
-            className="border-[#333333] text-[#FAFAFA] hover:border-[#E5192A]"
+            className="border-border text-foreground hover:border-[#E5192A]"
             disabled={passwordLoading}>
             {passwordLoading ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Changing...</>
@@ -215,20 +215,20 @@ export default function SettingsPage() {
       </div>
 
       {/* Plan Section */}
-      <div className="bg-[#111111] border border-[#222222] rounded-xl p-6">
+      <div className="bg-card border border-border rounded-xl p-6">
         <div className="flex items-center gap-2 mb-5">
           <CreditCard className="w-5 h-5 text-[#E5192A]" />
-          <h2 className="text-[#FAFAFA] font-bold text-lg">Plan & Usage</h2>
+          <h2 className="text-foreground font-bold text-lg">Plan & Usage</h2>
         </div>
 
         {subscription ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[#FAFAFA] font-semibold">
+                <p className="text-foreground font-semibold">
                   {subscription.plan.name} Plan
                 </p>
-                <p className="text-[#888888] text-sm">
+                <p className="text-muted-foreground text-sm">
                   ${subscription.plan.price_usd}/month
                 </p>
               </div>
@@ -238,8 +238,8 @@ export default function SettingsPage() {
             </div>
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-[#888888]">Videos used</span>
-                <span className="text-[#FAFAFA]">
+                <span className="text-muted-foreground">Videos used</span>
+                <span className="text-foreground">
                   {subscription.videos_used} / {subscription.plan.shorts_per_month ?? "∞"}
                 </span>
               </div>
@@ -248,7 +248,7 @@ export default function SettingsPage() {
           </div>
         ) : (
           <div className="text-center py-6">
-            <p className="text-[#888888] text-sm mb-4">
+            <p className="text-muted-foreground text-sm mb-4">
               You&apos;re on the free trial (3 videos).
             </p>
             <Button variant="red" size="sm" asChild>
@@ -259,12 +259,12 @@ export default function SettingsPage() {
       </div>
 
       {/* API Keys Section */}
-      <div className="bg-[#111111] border border-[#222222] rounded-xl p-6">
+      <div className="bg-card border border-border rounded-xl p-6">
         <div className="flex items-center gap-2 mb-5">
           <Key className="w-5 h-5 text-[#E5192A]" />
-          <h2 className="text-[#FAFAFA] font-bold text-lg">API Keys</h2>
+          <h2 className="text-foreground font-bold text-lg">API Keys</h2>
         </div>
-        <p className="text-[#888888] text-sm mb-4">
+        <p className="text-muted-foreground text-sm mb-4">
           Your configured API keys for AI providers. Keys are stored encrypted.
         </p>
         <div className="space-y-3">
@@ -273,10 +273,10 @@ export default function SettingsPage() {
             { label: "OpenAI API Key", key: "sk-****************************3c4d" },
             { label: "Google Gemini Key", key: "AI****************************5e6f" },
           ].map(({ label, key }) => (
-            <div key={label} className="flex items-center gap-3 p-3 bg-[#0A0A0A] rounded-lg border border-[#1A1A1A]">
+            <div key={label} className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border">
               <div className="flex-1">
-                <p className="text-[#888888] text-xs mb-0.5">{label}</p>
-                <p className="text-[#FAFAFA] font-mono text-sm">{key}</p>
+                <p className="text-muted-foreground text-xs mb-0.5">{label}</p>
+                <p className="text-foreground font-mono text-sm">{key}</p>
               </div>
               <CopyButton text={key} />
             </div>
@@ -285,12 +285,12 @@ export default function SettingsPage() {
       </div>
 
       {/* Voice Defaults */}
-      <div className="bg-[#111111] border border-[#222222] rounded-xl p-6">
+      <div className="bg-card border border-border rounded-xl p-6">
         <div className="flex items-center gap-2 mb-5">
           <Mic className="w-5 h-5 text-[#E5192A]" />
-          <h2 className="text-[#FAFAFA] font-bold text-lg">Voice Defaults</h2>
+          <h2 className="text-foreground font-bold text-lg">Voice Defaults</h2>
         </div>
-        <p className="text-[#888888] text-sm mb-4">
+        <p className="text-muted-foreground text-sm mb-4">
           Set your default voice settings for new channels.
         </p>
         <div className="grid grid-cols-2 gap-4">

@@ -72,8 +72,8 @@ export default function VideosPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[#FAFAFA] font-bold text-2xl">Videos</h1>
-          <p className="text-[#888888] text-sm mt-1">
+          <h1 className="text-foreground font-bold text-2xl">Videos</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             {total} video{total !== 1 ? "s" : ""} total
           </p>
         </div>
@@ -89,7 +89,7 @@ export default function VideosPage() {
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2 text-[#888888]">
+        <div className="flex items-center gap-2 text-muted-foreground">
           <Filter className="w-4 h-4" />
           <span className="text-sm">Filter:</span>
         </div>
@@ -129,12 +129,12 @@ export default function VideosPage() {
           ))}
         </div>
       ) : videos.length === 0 ? (
-        <div className="bg-[#111111] border border-[#222222] rounded-xl p-16 text-center">
-          <Video className="w-12 h-12 text-[#333333] mx-auto mb-4" />
-          <h3 className="text-[#888888] font-semibold text-lg mb-2">
+        <div className="bg-card border border-border rounded-xl p-16 text-center">
+          <Video className="w-12 h-12 text-foreground/60 mx-auto mb-4" />
+          <h3 className="text-muted-foreground font-semibold text-lg mb-2">
             No videos found
           </h3>
-          <p className="text-[#555555] text-sm mb-6">
+          <p className="text-muted-foreground text-sm mb-6">
             {statusFilter !== "all" || channelFilter !== "all"
               ? "Try adjusting your filters."
               : "Generate your first Short to get started."}
@@ -163,11 +163,11 @@ export default function VideosPage() {
                 size="sm"
                 disabled={page === 1}
                 onClick={() => setPage((p) => p - 1)}
-                className="border-[#333333] text-[#888888]"
+                className="border-border text-muted-foreground"
               >
                 Previous
               </Button>
-              <span className="text-[#888888] text-sm px-4">
+              <span className="text-muted-foreground text-sm px-4">
                 Page {page} of {totalPages}
               </span>
               <Button
@@ -175,7 +175,7 @@ export default function VideosPage() {
                 size="sm"
                 disabled={page === totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="border-[#333333] text-[#888888]"
+                className="border-border text-muted-foreground"
               >
                 Next
               </Button>

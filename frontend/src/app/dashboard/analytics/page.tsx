@@ -78,12 +78,12 @@ export default function AnalyticsPage() {
       {/* Header + Date Range */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-[#FAFAFA] font-bold text-2xl">Analytics</h1>
-          <p className="text-[#888888] text-sm mt-1">
+          <h1 className="text-foreground font-bold text-2xl">Analytics</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             Performance overview across all channels
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-[#111111] border border-[#222222] rounded-lg p-1">
+        <div className="flex items-center gap-2 bg-card border border-border rounded-lg p-1">
           {DATE_RANGES.map((r) => (
             <button
               key={r.value}
@@ -91,7 +91,7 @@ export default function AnalyticsPage() {
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                 dateRange === r.value
                   ? "bg-[#E5192A] text-white"
-                  : "text-[#888888] hover:text-[#FAFAFA]"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {r.label}
@@ -154,8 +154,8 @@ export default function AnalyticsPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Views Over Time */}
-        <div className="lg:col-span-2 bg-[#111111] border border-[#222222] rounded-xl p-5">
-          <h3 className="text-[#FAFAFA] font-bold mb-4">
+        <div className="lg:col-span-2 bg-card border border-border rounded-xl p-5">
+          <h3 className="text-foreground font-bold mb-4">
             Views Over Time ({dateRange}d)
           </h3>
           <ResponsiveContainer width="100%" height={280}>
@@ -194,8 +194,8 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Videos by Format */}
-        <div className="bg-[#111111] border border-[#222222] rounded-xl p-5">
-          <h3 className="text-[#FAFAFA] font-bold mb-4">Videos by Format</h3>
+        <div className="bg-card border border-border rounded-xl p-5">
+          <h3 className="text-foreground font-bold mb-4">Videos by Format</h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={FORMAT_DATA} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
@@ -227,8 +227,8 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Cost Over Time */}
-      <div className="bg-[#111111] border border-[#222222] rounded-xl p-5">
-        <h3 className="text-[#FAFAFA] font-bold mb-4">
+      <div className="bg-card border border-border rounded-xl p-5">
+        <h3 className="text-foreground font-bold mb-4">
           Daily Spend ({dateRange}d)
         </h3>
         <ResponsiveContainer width="100%" height={200}>
@@ -261,8 +261,8 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Top Videos */}
-      <div className="bg-[#111111] border border-[#222222] rounded-xl p-5">
-        <h3 className="text-[#FAFAFA] font-bold mb-4 flex items-center gap-2">
+      <div className="bg-card border border-border rounded-xl p-5">
+        <h3 className="text-foreground font-bold mb-4 flex items-center gap-2">
           <Trophy className="w-4 h-4 text-yellow-400" />
           Top Performing Videos
         </h3>
@@ -273,24 +273,24 @@ export default function AnalyticsPage() {
             ))}
           </div>
         ) : topVideos.length === 0 ? (
-          <p className="text-[#555555] text-sm">
+          <p className="text-muted-foreground text-sm">
             No posted videos yet. Post some Shorts to see performance data.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-left border-b border-[#1A1A1A]">
-                  <th className="text-[#555555] text-xs font-medium pb-3 pr-4">
+                <tr className="text-left border-b border-border">
+                  <th className="text-muted-foreground text-xs font-medium pb-3 pr-4">
                     Video
                   </th>
-                  <th className="text-[#555555] text-xs font-medium pb-3 pr-4">
+                  <th className="text-muted-foreground text-xs font-medium pb-3 pr-4">
                     Status
                   </th>
-                  <th className="text-[#555555] text-xs font-medium pb-3 pr-4">
+                  <th className="text-muted-foreground text-xs font-medium pb-3 pr-4">
                     Cost
                   </th>
-                  <th className="text-[#555555] text-xs font-medium pb-3">
+                  <th className="text-muted-foreground text-xs font-medium pb-3">
                     Posted
                   </th>
                 </tr>
@@ -299,12 +299,12 @@ export default function AnalyticsPage() {
                 {topVideos.map((video) => (
                   <tr
                     key={video.id}
-                    className="border-b border-[#1A1A1A] last:border-0"
+                    className="border-b border-border last:border-0"
                   >
                     <td className="py-3 pr-4">
                       <a
                         href={`/dashboard/videos/${video.id}`}
-                        className="text-[#FAFAFA] text-sm hover:text-[#E5192A] transition-colors truncate max-w-xs block"
+                        className="text-foreground text-sm hover:text-[#E5192A] transition-colors truncate max-w-xs block"
                       >
                         {video.seo_title ?? video.topic ?? "Untitled"}
                       </a>
@@ -312,12 +312,12 @@ export default function AnalyticsPage() {
                     <td className="py-3 pr-4">
                       <StatusBadge status={video.status} />
                     </td>
-                    <td className="py-3 pr-4 text-[#888888] text-sm">
+                    <td className="py-3 pr-4 text-muted-foreground text-sm">
                       {video.cost_usd !== null
                         ? formatCost(video.cost_usd)
                         : "—"}
                     </td>
-                    <td className="py-3 text-[#888888] text-sm">
+                    <td className="py-3 text-muted-foreground text-sm">
                       {video.posted_at ? timeAgo(video.posted_at) : "—"}
                     </td>
                   </tr>

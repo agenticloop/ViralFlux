@@ -10,50 +10,43 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // CSS-variable-driven semantic tokens (theme-aware)
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        // Static brand colors (never change between themes)
         primary: {
           DEFAULT: "#E5192A",
           dark: "#C01020",
           light: "#FF3040",
           foreground: "#FAFAFA",
         },
-        background: {
-          DEFAULT: "#0A0A0A",
-          card: "#111111",
-          muted: "#1A1A1A",
-        },
-        border: {
-          DEFAULT: "#222222",
-        },
-        foreground: {
-          DEFAULT: "#FAFAFA",
-          muted: "#888888",
-        },
         accent: {
           DEFAULT: "#FF3040",
           foreground: "#FAFAFA",
         },
         destructive: {
-          DEFAULT: "#E5192A",
-          foreground: "#FAFAFA",
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
-        muted: {
-          DEFAULT: "#1A1A1A",
-          foreground: "#888888",
-        },
-        card: {
-          DEFAULT: "#111111",
-          foreground: "#FAFAFA",
-        },
-        popover: {
-          DEFAULT: "#111111",
-          foreground: "#FAFAFA",
-        },
-        secondary: {
-          DEFAULT: "#1A1A1A",
-          foreground: "#FAFAFA",
-        },
-        input: "#222222",
-        ring: "#E5192A",
       },
       borderRadius: {
         lg: "var(--radius)",

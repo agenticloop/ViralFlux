@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Optional
 
 from sqlalchemy import (
     ARRAY,
@@ -44,7 +45,7 @@ class VideoAnalytic(Base):
     )
 
     # Relationships
-    job: Mapped | None = relationship("VideoJob", back_populates="analytics", lazy="noload")
+    job: Mapped[Optional["VideoJob"]] = relationship("VideoJob", back_populates="analytics", lazy="noload")
 
 
 class Asset(Base):

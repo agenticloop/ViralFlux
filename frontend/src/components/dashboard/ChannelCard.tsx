@@ -14,7 +14,7 @@ export default function ChannelCard({ channel }: ChannelCardProps) {
   const isConnected = !!channel.youtube_channel_id
 
   return (
-    <div className="bg-[#111111] border border-[#222222] rounded-xl p-5 hover:border-[#333333] transition-all duration-200">
+    <div className="bg-card border border-border rounded-xl p-5 hover:border-border transition-all duration-200">
       {/* Header */}
       <div className="flex items-start gap-3 mb-4">
         {/* Avatar */}
@@ -26,7 +26,7 @@ export default function ChannelCard({ channel }: ChannelCardProps) {
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-[#FAFAFA] font-semibold truncate">
+          <h3 className="text-foreground font-semibold truncate">
             {channel.channel_name}
           </h3>
           <div className="flex items-center gap-2 mt-1">
@@ -51,31 +51,31 @@ export default function ChannelCard({ channel }: ChannelCardProps) {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-[#1A1A1A] rounded-lg p-3">
+        <div className="bg-muted rounded-lg p-3">
           <div className="flex items-center gap-1.5 mb-1">
-            <Video className="w-3 h-3 text-[#555555]" />
-            <span className="text-[#555555] text-xs">Total Videos</span>
+            <Video className="w-3 h-3 text-muted-foreground" />
+            <span className="text-muted-foreground text-xs">Total Videos</span>
           </div>
-          <span className="text-[#FAFAFA] font-bold">
+          <span className="text-foreground font-bold">
             {channel.total_videos}
           </span>
         </div>
-        <div className="bg-[#1A1A1A] rounded-lg p-3">
+        <div className="bg-muted rounded-lg p-3">
           <div className="flex items-center gap-1.5 mb-1">
-            <span className="text-[#555555] text-xs">Last Post</span>
+            <span className="text-muted-foreground text-xs">Last Post</span>
           </div>
-          <span className="text-[#FAFAFA] font-bold text-xs">
+          <span className="text-foreground font-bold text-xs">
             {channel.last_posted_at ? timeAgo(channel.last_posted_at) : "Never"}
           </span>
         </div>
       </div>
 
       {/* Format + Voice */}
-      <div className="flex gap-2 mb-4 text-xs text-[#666666]">
-        <span className="bg-[#1A1A1A] px-2 py-1 rounded-md capitalize">
+      <div className="flex gap-2 mb-4 text-xs text-muted-foreground">
+        <span className="bg-muted px-2 py-1 rounded-md capitalize">
           {channel.default_format?.replace("_", " ") ?? "horror story"}
         </span>
-        <span className="bg-[#1A1A1A] px-2 py-1 rounded-md capitalize">
+        <span className="bg-muted px-2 py-1 rounded-md capitalize">
           {channel.default_voice_provider}
         </span>
       </div>
@@ -88,7 +88,7 @@ export default function ChannelCard({ channel }: ChannelCardProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 px-3 text-[#888888] hover:text-[#FAFAFA]"
+          className="h-8 px-3 text-muted-foreground hover:text-foreground"
           asChild
         >
           <Link href={`/dashboard/channels/${channel.id}`}>

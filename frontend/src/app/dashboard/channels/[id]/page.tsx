@@ -46,7 +46,7 @@ export default function ChannelDetailPage() {
 
   if (!channelData) {
     return (
-      <div className="text-center text-[#888888] mt-16">Channel not found.</div>
+      <div className="text-center text-muted-foreground mt-16">Channel not found.</div>
     )
   }
 
@@ -56,12 +56,12 @@ export default function ChannelDetailPage() {
   return (
     <div className="max-w-5xl space-y-6">
       {/* Channel Header */}
-      <div className="bg-[#111111] border border-[#222222] rounded-xl p-6 flex items-center gap-5">
+      <div className="bg-card border border-border rounded-xl p-6 flex items-center gap-5">
         <div className="w-16 h-16 rounded-2xl bg-[#E5192A]/15 border border-[#E5192A]/20 flex items-center justify-center text-2xl font-bold text-[#E5192A]">
           {channel.channel_name.slice(0, 2).toUpperCase()}
         </div>
         <div className="flex-1">
-          <h1 className="text-[#FAFAFA] font-bold text-2xl">
+          <h1 className="text-foreground font-bold text-2xl">
             {channel.channel_name}
           </h1>
           <div className="flex items-center gap-3 mt-1">
@@ -75,12 +75,12 @@ export default function ChannelDetailPage() {
               <Youtube className="w-3 h-3" />
               {channel.youtube_channel_id ? "Connected" : "Not Connected"}
             </span>
-            <span className="text-[#666666] text-xs flex items-center gap-1">
+            <span className="text-muted-foreground text-xs flex items-center gap-1">
               <Video className="w-3 h-3" />
               {channel.total_videos} videos
             </span>
             {channel.last_posted_at && (
-              <span className="text-[#666666] text-xs flex items-center gap-1">
+              <span className="text-muted-foreground text-xs flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 Last post {timeAgo(channel.last_posted_at)}
               </span>
@@ -127,17 +127,17 @@ export default function ChannelDetailPage() {
             ].map(({ label, value, icon: Icon }) => (
               <div
                 key={label}
-                className="bg-[#111111] border border-[#222222] rounded-xl p-4"
+                className="bg-card border border-border rounded-xl p-4"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Icon className="w-4 h-4 text-[#E5192A]" />
-                  <span className="text-[#888888] text-xs">{label}</span>
+                  <span className="text-muted-foreground text-xs">{label}</span>
                 </div>
-                <div className="text-[#FAFAFA] font-bold capitalize">{value}</div>
+                <div className="text-foreground font-bold capitalize">{value}</div>
               </div>
             ))}
           </div>
-          <p className="text-[#888888] text-sm">
+          <p className="text-muted-foreground text-sm">
             Connect this channel to YouTube and configure a schedule to start
             automating.
           </p>
@@ -145,10 +145,10 @@ export default function ChannelDetailPage() {
 
         {/* Analytics */}
         <TabsContent value="analytics">
-          <div className="bg-[#111111] border border-[#222222] rounded-xl p-6">
-            <h3 className="text-[#FAFAFA] font-bold mb-4">Views Over Time</h3>
+          <div className="bg-card border border-border rounded-xl p-6">
+            <h3 className="text-foreground font-bold mb-4">Views Over Time</h3>
             {analyticsPoints.length === 0 ? (
-              <div className="text-center text-[#555555] py-12">
+              <div className="text-center text-muted-foreground py-12">
                 No analytics data yet. Post some videos first.
               </div>
             ) : (
@@ -188,8 +188,8 @@ export default function ChannelDetailPage() {
 
         {/* Schedule */}
         <TabsContent value="schedule">
-          <div className="bg-[#111111] border border-[#222222] rounded-xl p-6">
-            <h3 className="text-[#FAFAFA] font-bold mb-6">
+          <div className="bg-card border border-border rounded-xl p-6">
+            <h3 className="text-foreground font-bold mb-6">
               Schedule Configuration
             </h3>
             <ScheduleConfig channelId={channelId} />
@@ -198,28 +198,28 @@ export default function ChannelDetailPage() {
 
         {/* Settings */}
         <TabsContent value="settings">
-          <div className="bg-[#111111] border border-[#222222] rounded-xl p-6">
-            <h3 className="text-[#FAFAFA] font-bold mb-4">Channel Settings</h3>
+          <div className="bg-card border border-border rounded-xl p-6">
+            <h3 className="text-foreground font-bold mb-4">Channel Settings</h3>
             <div className="space-y-4">
               <div>
-                <p className="text-[#888888] text-sm mb-1">Channel Name</p>
-                <p className="text-[#FAFAFA]">{channel.channel_name}</p>
+                <p className="text-muted-foreground text-sm mb-1">Channel Name</p>
+                <p className="text-foreground">{channel.channel_name}</p>
               </div>
               <div>
-                <p className="text-[#888888] text-sm mb-1">Voice Provider</p>
-                <p className="text-[#FAFAFA] capitalize">
+                <p className="text-muted-foreground text-sm mb-1">Voice Provider</p>
+                <p className="text-foreground capitalize">
                   {channel.default_voice_provider}
                 </p>
               </div>
               <div>
-                <p className="text-[#888888] text-sm mb-1">Default Format</p>
-                <p className="text-[#FAFAFA] capitalize">
+                <p className="text-muted-foreground text-sm mb-1">Default Format</p>
+                <p className="text-foreground capitalize">
                   {channel.default_format?.replace("_", " ")}
                 </p>
               </div>
               <div>
-                <p className="text-[#888888] text-sm mb-1">Music Category</p>
-                <p className="text-[#FAFAFA] capitalize">
+                <p className="text-muted-foreground text-sm mb-1">Music Category</p>
+                <p className="text-foreground capitalize">
                   {channel.default_music_category}
                 </p>
               </div>

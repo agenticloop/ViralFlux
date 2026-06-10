@@ -174,7 +174,7 @@ export default function GenerateModal() {
           <div className="space-y-1.5">
             <Label>
               Topic{" "}
-              <span className="text-[#555555] text-xs">(optional — AI picks if empty)</span>
+              <span className="text-muted-foreground text-xs">(optional — AI picks if empty)</span>
             </Label>
             <Input
               placeholder="e.g. The haunted hotel in Denver..."
@@ -233,12 +233,12 @@ export default function GenerateModal() {
           </div>
 
           {/* Post Immediately */}
-          <div className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-lg border border-[#222222]">
+          <div className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border">
             <div>
-              <p className="text-[#FAFAFA] text-sm font-medium">
+              <p className="text-foreground text-sm font-medium">
                 Post Immediately
               </p>
-              <p className="text-[#666666] text-xs">
+              <p className="text-muted-foreground text-xs">
                 Skip approval and post when ready
               </p>
             </div>
@@ -249,16 +249,16 @@ export default function GenerateModal() {
           </div>
 
           {/* Cost estimate */}
-          <div className="flex items-center gap-2 p-3 bg-[#0A0A0A] rounded-lg border border-[#1A1A1A]">
+          <div className="flex items-center gap-2 p-3 bg-background rounded-lg border border-border">
             <DollarSign className="w-4 h-4 text-green-400" />
             <div>
-              <span className="text-[#FAFAFA] text-sm">
+              <span className="text-foreground text-sm">
                 Estimated cost:{" "}
                 <strong className="text-green-400">
                   ~${estimatedCost.toFixed(2)}
                 </strong>
               </span>
-              <p className="text-[#555555] text-xs">
+              <p className="text-muted-foreground text-xs">
                 AI + voice generation fees
               </p>
             </div>
@@ -276,7 +276,7 @@ export default function GenerateModal() {
               type="button"
               variant="ghost"
               onClick={closeGenerateModal}
-              className="text-[#888888]"
+              className="text-muted-foreground"
             >
               Cancel
             </Button>

@@ -29,7 +29,7 @@ export default function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         scrolled
-          ? "bg-[#0A0A0A]/90 backdrop-blur-md border-b border-[#222222]"
+          ? "bg-background/90 backdrop-blur-md border-b border-border"
           : "bg-transparent"
       )}
     >
@@ -40,7 +40,7 @@ export default function Navbar() {
             <div className="w-8 h-8 rounded-lg bg-[#E5192A] flex items-center justify-center group-hover:bg-[#C01020] transition-colors">
               <Zap className="w-5 h-5 text-white fill-white" />
             </div>
-            <span className="text-[#FAFAFA] font-bold text-xl tracking-tight">
+            <span className="text-foreground font-bold text-xl tracking-tight">
               ViralFlux
             </span>
           </Link>
@@ -51,7 +51,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-[#888888] hover:text-[#FAFAFA] text-sm font-medium transition-colors"
+                className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
               >
                 {link.label}
               </Link>
@@ -61,7 +61,7 @@ export default function Navbar() {
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-3">
             <ThemeToggle />
-            <Button variant="ghost" asChild className="text-[#888888] hover:text-[#FAFAFA]">
+            <Button variant="ghost" asChild className="text-muted-foreground hover:text-foreground">
               <Link href="/login">Login</Link>
             </Button>
             <Button variant="red" asChild size="sm">
@@ -71,7 +71,7 @@ export default function Navbar() {
 
           {/* Mobile toggle */}
           <button
-            className="md:hidden text-[#888888] hover:text-[#FAFAFA] p-2"
+            className="md:hidden text-muted-foreground hover:text-foreground p-2"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle menu"
           >
@@ -87,21 +87,21 @@ export default function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-[#0F0F0F] border-b border-[#222222] overflow-hidden"
+            className="md:hidden bg-background border-b border-border overflow-hidden"
           >
             <div className="px-4 py-4 flex flex-col gap-4">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-[#888888] hover:text-[#FAFAFA] text-sm font-medium py-2 transition-colors"
+                  className="text-muted-foreground hover:text-foreground text-sm font-medium py-2 transition-colors"
                   onClick={() => setMobileOpen(false)}
                 >
                   {link.label}
                 </Link>
               ))}
-              <div className="flex items-center gap-3 pt-2 border-t border-[#222222]">
-                <Button variant="ghost" asChild className="flex-1 text-[#888888]">
+              <div className="flex items-center gap-3 pt-2 border-t border-border">
+                <Button variant="ghost" asChild className="flex-1 text-muted-foreground">
                   <Link href="/login" onClick={() => setMobileOpen(false)}>Login</Link>
                 </Button>
                 <Button variant="red" asChild className="flex-1">

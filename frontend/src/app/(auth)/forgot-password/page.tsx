@@ -54,11 +54,11 @@ export default function ForgotPasswordPage() {
           <div className="w-12 h-12 bg-green-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">✉️</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#FAFAFA] mb-2">
+          <h1 className="text-2xl font-bold text-foreground mb-2">
             Check your inbox
           </h1>
-          <p className="text-[#888888] text-sm mb-6">
-            If <span className="text-[#FAFAFA]">{submittedEmail}</span> is
+          <p className="text-muted-foreground text-sm mb-6">
+            If <span className="text-foreground">{submittedEmail}</span> is
             registered, you&apos;ll receive a reset code shortly.
           </p>
           <Button
@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
           </Button>
           <Link
             href="/login"
-            className="text-sm text-[#888888] hover:text-[#FAFAFA] transition-colors flex items-center justify-center gap-1"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1"
           >
             <ArrowLeft className="w-3 h-3" />
             Back to login
@@ -87,10 +87,10 @@ export default function ForgotPasswordPage() {
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#FAFAFA] mb-1">
+        <h1 className="text-2xl font-bold text-foreground mb-1">
           Reset your password
         </h1>
-        <p className="text-[#888888] text-sm">
+        <p className="text-muted-foreground text-sm">
           Enter your email and we&apos;ll send you a reset code.
         </p>
       </div>
@@ -130,7 +130,7 @@ export default function ForgotPasswordPage() {
       <div className="mt-6 text-center">
         <Link
           href="/login"
-          className="text-sm text-[#888888] hover:text-[#FAFAFA] transition-colors flex items-center justify-center gap-1"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1"
         >
           <ArrowLeft className="w-3 h-3" />
           Back to login

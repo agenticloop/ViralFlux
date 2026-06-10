@@ -25,7 +25,7 @@ export default function StatsCard({
   const isNeutral = change === 0
 
   return (
-    <div className="bg-[#111111] border border-[#222222] rounded-xl p-5 hover:border-[#333333] transition-all duration-200">
+    <div className="bg-card border border-border rounded-xl p-5 hover:border-border transition-all duration-200">
       <div className="flex items-start justify-between mb-4">
         <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", iconBg)}>
           <Icon className={cn("w-5 h-5", iconColor)} />
@@ -53,10 +53,10 @@ export default function StatsCard({
       </div>
 
       <div className="space-y-1">
-        <div className="text-2xl font-black text-[#FAFAFA]">{value}</div>
-        <div className="text-[#888888] text-sm">{label}</div>
+        <div className="text-2xl font-black text-foreground">{value}</div>
+        <div className="text-muted-foreground text-sm">{label}</div>
         {changeLabel && (
-          <div className="text-[#555555] text-xs">{changeLabel}</div>
+          <div className="text-muted-foreground text-xs">{changeLabel}</div>
         )}
       </div>
     </div>

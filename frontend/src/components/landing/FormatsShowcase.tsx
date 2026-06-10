@@ -74,7 +74,7 @@ const formats = [
 
 export default function FormatsShowcase() {
   return (
-    <section className="py-20 bg-[#0A0A0A]">
+    <section className="py-20 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -86,11 +86,11 @@ export default function FormatsShowcase() {
           <span className="text-[#E5192A] text-sm font-semibold uppercase tracking-wider mb-3 block">
             Content Formats
           </span>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#FAFAFA] mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground mb-4">
             Start with Horror.{" "}
             <span className="text-gradient-red">More Coming.</span>
           </h2>
-          <p className="text-[#888888] text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             We&apos;re launching with the highest-converting format first and
             expanding fast.
           </p>
@@ -107,7 +107,7 @@ export default function FormatsShowcase() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.08 }}
-                className={`p-6 rounded-xl border border-[#222222] bg-[#0F0F0F] transition-all duration-300 ${
+                className={`p-6 rounded-xl border border-border bg-background transition-all duration-300 ${
                   format.isActive
                     ? "border-[#E5192A]/30 hover:border-[#E5192A]/60 hover:shadow-xl hover:shadow-red-900/10"
                     : "opacity-60 hover:opacity-75"
@@ -126,10 +126,10 @@ export default function FormatsShowcase() {
                   </span>
                 </div>
 
-                <h3 className="text-[#FAFAFA] font-bold text-lg mb-2">
+                <h3 className="text-foreground font-bold text-lg mb-2">
                   {format.name}
                 </h3>
-                <p className="text-[#666666] text-sm leading-relaxed mb-4">
+                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                   {format.description}
                 </p>
 
@@ -137,7 +137,7 @@ export default function FormatsShowcase() {
                   {format.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="text-xs text-[#555555] bg-[#1A1A1A] px-2 py-1 rounded-md"
+                      className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md"
                     >
                       {tag}
                     </span>

@@ -48,7 +48,7 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-20 bg-[#0A0A0A]">
+    <section id="how-it-works" className="py-20 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -60,11 +60,11 @@ export default function HowItWorks() {
           <span className="text-[#E5192A] text-sm font-semibold uppercase tracking-wider mb-3 block">
             How It Works
           </span>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#FAFAFA] mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground mb-4">
             From Zero to Posted in{" "}
             <span className="text-gradient-red">Minutes</span>
           </h2>
-          <p className="text-[#888888] text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             Four automated steps. Zero effort on your end.
           </p>
         </motion.div>
@@ -98,10 +98,10 @@ export default function HowItWorks() {
                     </div>
                   </div>
 
-                  <h3 className="text-[#FAFAFA] font-bold text-lg mb-3">
+                  <h3 className="text-foreground font-bold text-lg mb-3">
                     {step.emoji} {step.title}
                   </h3>
-                  <p className="text-[#666666] text-sm leading-relaxed">
+                  <p className="text-muted-foreground text-sm leading-relaxed">
                     {step.description}
                   </p>
                 </motion.div>

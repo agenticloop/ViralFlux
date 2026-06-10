@@ -148,12 +148,12 @@ export default function BlogPostPage({ params }: { params: Params }) {
 
   if (!post) {
     return (
-      <div className="bg-[#0A0A0A] min-h-screen pt-24 pb-16 flex items-center justify-center">
+      <div className="bg-background min-h-screen pt-24 pb-16 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-[#FAFAFA] mb-4">
+          <h1 className="text-3xl font-bold text-foreground mb-4">
             Post Not Found
           </h1>
-          <p className="text-[#888888] mb-6">
+          <p className="text-muted-foreground mb-6">
             This post doesn&apos;t exist or hasn&apos;t been published yet.
           </p>
           <Button variant="red" asChild>
@@ -165,12 +165,12 @@ export default function BlogPostPage({ params }: { params: Params }) {
   }
 
   return (
-    <div className="bg-[#0A0A0A] min-h-screen pt-24 pb-16">
+    <div className="bg-background min-h-screen pt-24 pb-16">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back */}
         <Link
           href="/blog"
-          className="inline-flex items-center gap-2 text-[#888888] hover:text-[#FAFAFA] text-sm mb-8 transition-colors"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Blog
@@ -190,12 +190,12 @@ export default function BlogPostPage({ params }: { params: Params }) {
         </div>
 
         {/* Title */}
-        <h1 className="text-3xl sm:text-4xl font-black text-[#FAFAFA] leading-tight mb-4">
+        <h1 className="text-3xl sm:text-4xl font-black text-foreground leading-tight mb-4">
           {post.title}
         </h1>
 
         {/* Meta */}
-        <div className="flex items-center gap-4 text-sm text-[#666666] mb-8 pb-8 border-b border-[#1A1A1A]">
+        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-8 pb-8 border-b border-border">
           <div className="flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5" />
             <span>{post.readingTime} min read</span>
@@ -213,7 +213,7 @@ export default function BlogPostPage({ params }: { params: Params }) {
               return (
                 <h2
                   key={i}
-                  className="text-xl font-bold text-[#FAFAFA] mt-8 mb-4"
+                  className="text-xl font-bold text-foreground mt-8 mb-4"
                 >
                   {block.slice(3)}
                 </h2>
@@ -223,18 +223,18 @@ export default function BlogPostPage({ params }: { params: Params }) {
               return (
                 <blockquote
                   key={i}
-                  className="border-l-4 border-[#E5192A] pl-4 italic text-[#CCCCCC] my-4"
+                  className="border-l-4 border-[#E5192A] pl-4 italic text-muted-foreground/70 my-4"
                 >
                   {block.replace(/\*/g, "")}
                 </blockquote>
               )
             }
             return (
-              <p key={i} className="text-[#CCCCCC] leading-relaxed mb-4">
+              <p key={i} className="text-muted-foreground/70 leading-relaxed mb-4">
                 {block.split(/(\*\*[^*]+\*\*)/).map((part, j) => {
                   if (part.startsWith("**") && part.endsWith("**")) {
                     return (
-                      <strong key={j} className="text-[#FAFAFA] font-semibold">
+                      <strong key={j} className="text-foreground font-semibold">
                         {part.slice(2, -2)}
                       </strong>
                     )
@@ -247,11 +247,11 @@ export default function BlogPostPage({ params }: { params: Params }) {
         </div>
 
         {/* CTA */}
-        <div className="mt-12 pt-8 border-t border-[#1A1A1A] bg-[#111111] rounded-xl p-8 text-center">
-          <h3 className="text-[#FAFAFA] font-bold text-xl mb-2">
+        <div className="mt-12 pt-8 border-t border-border bg-card rounded-xl p-8 text-center">
+          <h3 className="text-foreground font-bold text-xl mb-2">
             Ready to automate your Shorts?
           </h3>
-          <p className="text-[#888888] text-sm mb-4">
+          <p className="text-muted-foreground text-sm mb-4">
             Start with 3 free Shorts — no credit card required.
           </p>
           <Button variant="red" asChild>

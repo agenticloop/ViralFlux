@@ -61,7 +61,7 @@ const stats = [
 
 export default function SocialProof() {
   return (
-    <section className="py-16 bg-[#0A0A0A] border-y border-[#1A1A1A]">
+    <section className="py-16 bg-background border-y border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
           {stats.map((stat, i) => (
@@ -73,7 +73,7 @@ export default function SocialProof() {
               transition={{ duration: 0.5, delay: i * 0.1 }}
               className="text-center"
             >
-              <div className="text-4xl md:text-5xl font-black text-[#FAFAFA] mb-2">
+              <div className="text-4xl md:text-5xl font-black text-foreground mb-2">
                 {stat.isDecimal ? (
                   <motion.span
                     initial={{ opacity: 0 }}
@@ -93,10 +93,10 @@ export default function SocialProof() {
                   </span>
                 )}
               </div>
-              <div className="text-[#FAFAFA] font-semibold text-lg mb-1">
+              <div className="text-foreground font-semibold text-lg mb-1">
                 {stat.label}
               </div>
-              <div className="text-[#666666] text-sm">{stat.description}</div>
+              <div className="text-muted-foreground text-sm">{stat.description}</div>
             </motion.div>
           ))}
         </div>

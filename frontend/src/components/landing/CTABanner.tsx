@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 
 export default function CTABanner() {
   return (
-    <section className="py-20 bg-[#0F0F0F]">
+    <section className="py-20 bg-background">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}

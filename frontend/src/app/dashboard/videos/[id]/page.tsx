@@ -71,7 +71,7 @@ export default function VideoDetailPage() {
 
   if (!video) {
     return (
-      <div className="text-center text-[#888888] mt-16">Video not found.</div>
+      <div className="text-center text-muted-foreground mt-16">Video not found.</div>
     )
   }
 
@@ -80,7 +80,7 @@ export default function VideoDetailPage() {
       {/* Back */}
       <Link
         href="/dashboard/videos"
-        className="inline-flex items-center gap-2 text-[#888888] hover:text-[#FAFAFA] text-sm mb-6 transition-colors"
+        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Videos
@@ -90,16 +90,16 @@ export default function VideoDetailPage() {
         {/* Left: Video + Actions */}
         <div className="space-y-4">
           {/* Video Preview */}
-          <div className="bg-[#111111] border border-[#222222] rounded-xl overflow-hidden">
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
             {video.video_path ? (
               <VideoPlayer
                 src={video.video_path}
                 className="w-full aspect-[9/16]"
               />
             ) : (
-              <div className="aspect-[9/16] bg-[#1A1A1A] flex flex-col items-center justify-center text-center p-6">
+              <div className="aspect-[9/16] bg-muted flex flex-col items-center justify-center text-center p-6">
                 <StatusBadge status={video.status} className="mb-3" />
-                <p className="text-[#666666] text-sm">
+                <p className="text-muted-foreground text-sm">
                   {video.status === "generating"
                     ? "Video is being generated..."
                     : video.status === "queued"
@@ -118,7 +118,7 @@ export default function VideoDetailPage() {
           {/* Actions */}
           {video.status === "pending_approval" && (
             <div className="space-y-2">
-              <p className="text-[#888888] text-xs text-center">
+              <p className="text-muted-foreground text-xs text-center">
                 Review and approve or reject this Short
               </p>
               <Button
@@ -153,7 +153,7 @@ export default function VideoDetailPage() {
           {video.youtube_url && (
             <Button
               variant="outline"
-              className="w-full border-[#333333] text-[#FAFAFA] hover:border-[#E5192A] flex items-center gap-2"
+              className="w-full border-border text-foreground hover:border-[#E5192A] flex items-center gap-2"
               asChild
             >
               <a href={video.youtube_url} target="_blank" rel="noopener noreferrer">
@@ -168,19 +168,19 @@ export default function VideoDetailPage() {
         {/* Right: Details */}
         <div className="lg:col-span-2 space-y-4">
           {/* Status + Meta */}
-          <div className="bg-[#111111] border border-[#222222] rounded-xl p-5">
+          <div className="bg-card border border-border rounded-xl p-5">
             <div className="flex items-center gap-3 mb-4">
               <StatusBadge status={video.status} />
-              <span className="text-[#555555] text-xs capitalize">
+              <span className="text-muted-foreground text-xs capitalize">
                 {video.format_slug?.replace("_", " ")}
               </span>
             </div>
 
-            <h1 className="text-[#FAFAFA] font-bold text-xl mb-1">
+            <h1 className="text-foreground font-bold text-xl mb-1">
               {video.seo_title ?? video.topic ?? "Untitled Short"}
             </h1>
 
-            <div className="flex flex-wrap gap-4 text-sm text-[#888888] mt-3">
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-3">
               {video.cost_usd !== null && (
                 <span className="flex items-center gap-1.5">
                   <DollarSign className="w-3.5 h-3.5 text-green-400" />
@@ -202,33 +202,33 @@ export default function VideoDetailPage() {
 
           {/* SEO Metadata */}
           {(video.seo_title || video.seo_description) && (
-            <div className="bg-[#111111] border border-[#222222] rounded-xl p-5">
-              <h3 className="text-[#FAFAFA] font-semibold mb-4 flex items-center gap-2">
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h3 className="text-foreground font-semibold mb-4 flex items-center gap-2">
                 <Tag className="w-4 h-4 text-[#E5192A]" />
                 SEO Metadata
               </h3>
               {video.seo_title && (
                 <div className="mb-3">
-                  <p className="text-[#555555] text-xs mb-1">Title</p>
-                  <p className="text-[#CCCCCC] text-sm">{video.seo_title}</p>
+                  <p className="text-muted-foreground text-xs mb-1">Title</p>
+                  <p className="text-muted-foreground/70 text-sm">{video.seo_title}</p>
                 </div>
               )}
               {video.seo_description && (
                 <div className="mb-3">
-                  <p className="text-[#555555] text-xs mb-1">Description</p>
-                  <p className="text-[#CCCCCC] text-sm leading-relaxed">
+                  <p className="text-muted-foreground text-xs mb-1">Description</p>
+                  <p className="text-muted-foreground/70 text-sm leading-relaxed">
                     {video.seo_description}
                   </p>
                 </div>
               )}
               {video.seo_tags && video.seo_tags.length > 0 && (
                 <div>
-                  <p className="text-[#555555] text-xs mb-2">Tags</p>
+                  <p className="text-muted-foreground text-xs mb-2">Tags</p>
                   <div className="flex flex-wrap gap-2">
                     {video.seo_tags.map((tag) => (
                       <span
                         key={tag}
-                        className="text-xs bg-[#1A1A1A] text-[#888888] px-2 py-1 rounded-md"
+                        className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-md"
                       >
                         #{tag}
                       </span>
@@ -241,13 +241,13 @@ export default function VideoDetailPage() {
 
           {/* Script */}
           {video.script && (
-            <div className="bg-[#111111] border border-[#222222] rounded-xl p-5">
-              <h3 className="text-[#FAFAFA] font-semibold mb-4 flex items-center gap-2">
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h3 className="text-foreground font-semibold mb-4 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-[#E5192A]" />
                 Script
               </h3>
-              <div className="bg-[#0A0A0A] rounded-lg p-4 border border-[#1A1A1A]">
-                <p className="text-[#CCCCCC] text-sm leading-relaxed whitespace-pre-wrap font-mono">
+              <div className="bg-background rounded-lg p-4 border border-border">
+                <p className="text-muted-foreground/70 text-sm leading-relaxed whitespace-pre-wrap font-mono">
                   {video.script}
                 </p>
               </div>

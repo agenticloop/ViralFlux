@@ -94,8 +94,8 @@ export default function ChannelsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[#FAFAFA] font-bold text-2xl">Channels</h1>
-          <p className="text-[#888888] text-sm mt-1">
+          <h1 className="text-foreground font-bold text-2xl">Channels</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             {channels.length} channel{channels.length !== 1 ? "s" : ""} configured
           </p>
         </div>
@@ -117,12 +117,12 @@ export default function ChannelsPage() {
           ))}
         </div>
       ) : channels.length === 0 ? (
-        <div className="bg-[#111111] border border-[#222222] rounded-xl p-16 text-center">
-          <Tv2 className="w-12 h-12 text-[#333333] mx-auto mb-4" />
-          <h3 className="text-[#888888] font-semibold text-lg mb-2">
+        <div className="bg-card border border-border rounded-xl p-16 text-center">
+          <Tv2 className="w-12 h-12 text-foreground/60 mx-auto mb-4" />
+          <h3 className="text-muted-foreground font-semibold text-lg mb-2">
             No channels yet
           </h3>
-          <p className="text-[#555555] text-sm mb-6">
+          <p className="text-muted-foreground text-sm mb-6">
             Add your first channel to start generating Shorts.
           </p>
           <Button variant="red" onClick={() => setAddOpen(true)}>
@@ -236,7 +236,7 @@ export default function ChannelsPage() {
                 type="button"
                 variant="ghost"
                 onClick={() => setAddOpen(false)}
-                className="text-[#888888]"
+                className="text-muted-foreground"
               >
                 Cancel
               </Button>

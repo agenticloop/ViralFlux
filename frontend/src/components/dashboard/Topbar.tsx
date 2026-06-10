@@ -32,10 +32,10 @@ export default function Topbar() {
   const { user } = useAuthStore()
 
   return (
-    <header className="h-16 bg-[#0F0F0F] border-b border-[#1A1A1A] flex items-center justify-between px-6 flex-shrink-0">
+    <header className="h-16 bg-background border-b border-border flex items-center justify-between px-6 flex-shrink-0">
       {/* Page Title */}
       <div>
-        <h1 className="text-[#FAFAFA] font-bold text-lg">
+        <h1 className="text-foreground font-bold text-lg">
           {getPageTitle(pathname)}
         </h1>
       </div>
@@ -54,7 +54,7 @@ export default function Topbar() {
         </Button>
 
         {/* Notifications */}
-        <button className="relative w-9 h-9 rounded-md border border-[#222222] flex items-center justify-center text-[#666666] hover:text-[#FAFAFA] hover:border-[#333333] transition-all">
+        <button className="relative w-9 h-9 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-border transition-all">
           <Bell className="w-4 h-4" />
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#E5192A] rounded-full text-white text-[10px] flex items-center justify-center font-bold">
             3

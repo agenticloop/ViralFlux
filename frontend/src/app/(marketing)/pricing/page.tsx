@@ -120,14 +120,14 @@ const faqs = [
 
 export default function PricingPage() {
   return (
-    <div className="bg-[#0A0A0A] min-h-screen pt-24 pb-16">
+    <div className="bg-background min-h-screen pt-24 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
-          <h1 className="text-4xl sm:text-5xl font-black text-[#FAFAFA] mb-4">
+          <h1 className="text-4xl sm:text-5xl font-black text-foreground mb-4">
             Simple, Transparent Pricing
           </h1>
-          <p className="text-[#888888] text-lg max-w-xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Start with 3 free Shorts. Upgrade when you&apos;re ready.
           </p>
         </div>
@@ -140,7 +140,7 @@ export default function PricingPage() {
               className={`relative rounded-2xl p-8 border ${
                 plan.popular
                   ? "border-[#E5192A] bg-gradient-to-b from-[#E5192A]/5 to-[#111111]"
-                  : "border-[#222222] bg-[#111111]"
+                  : "border-border bg-card"
               }`}
             >
               {plan.popular && (
@@ -151,23 +151,23 @@ export default function PricingPage() {
                 </div>
               )}
 
-              <h2 className="text-[#FAFAFA] font-bold text-xl mb-1">
+              <h2 className="text-foreground font-bold text-xl mb-1">
                 {plan.name}
               </h2>
-              <p className="text-[#666666] text-sm mb-4">{plan.tagline}</p>
+              <p className="text-muted-foreground text-sm mb-4">{plan.tagline}</p>
 
               <div className="flex items-end gap-1 mb-6">
-                <span className="text-5xl font-black text-[#FAFAFA]">
+                <span className="text-5xl font-black text-foreground">
                   ${plan.price}
                 </span>
-                <span className="text-[#666666] text-sm mb-1">/month</span>
+                <span className="text-muted-foreground text-sm mb-1">/month</span>
               </div>
 
               <Button
                 variant={plan.popular ? "red" : "outline"}
                 className={`w-full mb-6 ${
                   !plan.popular &&
-                  "border-[#333333] text-[#FAFAFA] hover:border-[#E5192A]"
+                  "border-border text-foreground hover:border-[#E5192A]"
                 }`}
                 asChild
               >
@@ -180,13 +180,13 @@ export default function PricingPage() {
                   .map(([key, val]) => (
                     <li key={key} className="flex items-center gap-2 text-sm">
                       {val === false ? (
-                        <X className="w-4 h-4 text-[#444444] flex-shrink-0" />
+                        <X className="w-4 h-4 text-foreground/70 flex-shrink-0" />
                       ) : (
                         <Check className="w-4 h-4 text-[#E5192A] flex-shrink-0" />
                       )}
                       <span
                         className={
-                          val === false ? "text-[#444444]" : "text-[#CCCCCC]"
+                          val === false ? "text-foreground/70" : "text-muted-foreground/70"
                         }
                       >
                         {typeof val === "string" ? val + " " : ""}
@@ -201,21 +201,21 @@ export default function PricingPage() {
 
         {/* Feature Comparison Table */}
         <div className="max-w-5xl mx-auto mb-20">
-          <h2 className="text-2xl font-bold text-[#FAFAFA] mb-8 text-center">
+          <h2 className="text-2xl font-bold text-foreground mb-8 text-center">
             Full Feature Comparison
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="text-left text-[#888888] text-sm font-medium py-3 px-4 w-1/2">
+                  <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4 w-1/2">
                     Feature
                   </th>
                   {plans.map((plan) => (
                     <th
                       key={plan.name}
                       className={`text-center text-sm font-bold py-3 px-4 ${
-                        plan.popular ? "text-[#E5192A]" : "text-[#FAFAFA]"
+                        plan.popular ? "text-[#E5192A]" : "text-foreground"
                       }`}
                     >
                       {plan.name}
@@ -227,11 +227,11 @@ export default function PricingPage() {
                 {featureKeys.map((key, i) => (
                   <tr
                     key={key}
-                    className={`border-t border-[#1A1A1A] ${
-                      i % 2 === 0 ? "bg-transparent" : "bg-[#0F0F0F]"
+                    className={`border-t border-border ${
+                      i % 2 === 0 ? "bg-transparent" : "bg-background"
                     }`}
                   >
-                    <td className="text-[#CCCCCC] text-sm py-3 px-4">{key}</td>
+                    <td className="text-muted-foreground/70 text-sm py-3 px-4">{key}</td>
                     {plans.map((plan) => {
                       const val =
                         plan.features[key as keyof typeof plan.features]
@@ -243,9 +243,9 @@ export default function PricingPage() {
                           {val === true ? (
                             <Check className="w-4 h-4 text-[#E5192A] mx-auto" />
                           ) : val === false ? (
-                            <X className="w-4 h-4 text-[#444444] mx-auto" />
+                            <X className="w-4 h-4 text-foreground/70 mx-auto" />
                           ) : (
-                            <span className="text-[#FAFAFA] text-sm font-medium">
+                            <span className="text-foreground text-sm font-medium">
                               {val}
                             </span>
                           )}
@@ -261,17 +261,17 @@ export default function PricingPage() {
 
         {/* FAQ */}
         <div className="max-w-3xl mx-auto mb-20">
-          <h2 className="text-2xl font-bold text-[#FAFAFA] mb-8 text-center">
+          <h2 className="text-2xl font-bold text-foreground mb-8 text-center">
             Frequently Asked Questions
           </h2>
           <div className="space-y-4">
             {faqs.map((faq) => (
               <div
                 key={faq.q}
-                className="bg-[#111111] border border-[#222222] rounded-xl p-6"
+                className="bg-card border border-border rounded-xl p-6"
               >
-                <h3 className="text-[#FAFAFA] font-semibold mb-2">{faq.q}</h3>
-                <p className="text-[#888888] text-sm leading-relaxed">{faq.a}</p>
+                <h3 className="text-foreground font-semibold mb-2">{faq.q}</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">{faq.a}</p>
               </div>
             ))}
           </div>
@@ -279,10 +279,10 @@ export default function PricingPage() {
 
         {/* Bottom CTA */}
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-[#FAFAFA] mb-4">
+          <h2 className="text-2xl font-bold text-foreground mb-4">
             Ready to start automating?
           </h2>
-          <p className="text-[#888888] mb-6">
+          <p className="text-muted-foreground mb-6">
             3 free Shorts. No credit card. Set up in under 5 minutes.
           </p>
           <Button variant="red" size="lg" asChild className="px-10">

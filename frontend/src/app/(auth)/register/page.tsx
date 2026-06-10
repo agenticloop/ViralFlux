@@ -91,10 +91,10 @@ export default function RegisterPage() {
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#FAFAFA] mb-1">
+        <h1 className="text-2xl font-bold text-foreground mb-1">
           Create your account
         </h1>
-        <p className="text-[#888888] text-sm">
+        <p className="text-muted-foreground text-sm">
           Start free — 3 Shorts included. No credit card.
         </p>
       </div>
@@ -145,7 +145,7 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555555] hover:text-[#888888]"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
             >
               {showPassword ? (
                 <EyeOff className="w-4 h-4" />
@@ -162,12 +162,12 @@ export default function RegisterPage() {
                   <div
                     key={i}
                     className={`h-1 flex-1 rounded-full transition-all ${
-                      i <= strength ? strengthColors[strength] : "bg-[#222222]"
+                      i <= strength ? strengthColors[strength] : "bg-muted"
                     }`}
                   />
                 ))}
               </div>
-              <p className="text-xs text-[#888888]">
+              <p className="text-xs text-muted-foreground">
                 {strengthLabels[strength]} password
               </p>
             </div>
@@ -192,7 +192,7 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555555] hover:text-[#888888]"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
             >
               {showConfirm ? (
                 <EyeOff className="w-4 h-4" />
@@ -232,20 +232,20 @@ export default function RegisterPage() {
           )}
         </Button>
 
-        <p className="text-xs text-[#555555] text-center">
+        <p className="text-xs text-muted-foreground text-center">
           By creating an account, you agree to our{" "}
-          <Link href="/terms" className="text-[#888888] hover:text-[#FAFAFA]">
+          <Link href="/terms" className="text-muted-foreground hover:text-foreground">
             Terms
           </Link>{" "}
           and{" "}
-          <Link href="/privacy" className="text-[#888888] hover:text-[#FAFAFA]">
+          <Link href="/privacy" className="text-muted-foreground hover:text-foreground">
             Privacy Policy
           </Link>
           .
         </p>
       </form>
 
-      <p className="mt-6 text-center text-sm text-[#888888]">
+      <p className="mt-6 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link
           href="/login"

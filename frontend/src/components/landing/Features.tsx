@@ -63,7 +63,7 @@ const features = [
 
 export default function Features() {
   return (
-    <section id="features" className="py-20 bg-[#0F0F0F]">
+    <section id="features" className="py-20 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -75,11 +75,11 @@ export default function Features() {
           <span className="text-[#E5192A] text-sm font-semibold uppercase tracking-wider mb-3 block">
             Features
           </span>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#FAFAFA] mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground mb-4">
             Everything You Need to{" "}
             <span className="text-gradient-red">Scale</span>
           </h2>
-          <p className="text-[#888888] text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             A complete automation stack for serious YouTube Shorts creators.
           </p>
         </motion.div>
@@ -99,14 +99,14 @@ export default function Features() {
               >
                 <div className="mb-4">
                   <div
-                    className={`w-10 h-10 rounded-lg bg-[#0A0A0A] flex items-center justify-center mb-4`}
+                    className={`w-10 h-10 rounded-lg bg-background flex items-center justify-center mb-4`}
                   >
                     <Icon className={`w-5 h-5 ${feature.color}`} />
                   </div>
-                  <h3 className="text-[#FAFAFA] font-bold text-lg mb-2">
+                  <h3 className="text-foreground font-bold text-lg mb-2">
                     {feature.title}
                   </h3>
-                  <p className="text-[#666666] text-sm leading-relaxed">
+                  <p className="text-muted-foreground text-sm leading-relaxed">
                     {feature.description}
                   </p>
                 </div>

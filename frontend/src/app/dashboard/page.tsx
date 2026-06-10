@@ -103,7 +103,7 @@ export default function DashboardPage() {
         {/* Recent Videos */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-[#FAFAFA] font-bold text-lg">Recent Videos</h2>
+            <h2 className="text-foreground font-bold text-lg">Recent Videos</h2>
             <Button
               variant="red"
               size="sm"
@@ -116,12 +116,12 @@ export default function DashboardPage() {
           </div>
 
           {videos.length === 0 ? (
-            <div className="bg-[#111111] border border-[#222222] rounded-xl p-12 text-center">
-              <Video className="w-10 h-10 text-[#333333] mx-auto mb-3" />
-              <h3 className="text-[#888888] font-medium mb-1">
+            <div className="bg-card border border-border rounded-xl p-12 text-center">
+              <Video className="w-10 h-10 text-foreground/60 mx-auto mb-3" />
+              <h3 className="text-muted-foreground font-medium mb-1">
                 No videos yet
               </h3>
-              <p className="text-[#555555] text-sm mb-4">
+              <p className="text-muted-foreground text-sm mb-4">
                 Generate your first Short to get started.
               </p>
               <Button
@@ -144,13 +144,13 @@ export default function DashboardPage() {
         {/* Sidebar Panels */}
         <div className="space-y-4">
           {/* AI Trending Topics */}
-          <div className="bg-[#111111] border border-[#222222] rounded-xl p-5">
-            <h3 className="text-[#FAFAFA] font-bold mb-4 flex items-center gap-2">
+          <div className="bg-card border border-border rounded-xl p-5">
+            <h3 className="text-foreground font-bold mb-4 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-[#E5192A]" />
               Trending Topics
             </h3>
             {trending.length === 0 ? (
-              <p className="text-[#555555] text-sm">
+              <p className="text-muted-foreground text-sm">
                 Fetching trending topics...
               </p>
             ) : (
@@ -158,15 +158,15 @@ export default function DashboardPage() {
                 {trending.slice(0, 5).map((topic, i) => (
                   <div
                     key={topic.topic}
-                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-[#1A1A1A] transition-colors cursor-pointer group"
+                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer group"
                     onClick={() => openGenerateModal()}
                   >
-                    <span className="text-[#444444] text-xs w-4">{i + 1}</span>
+                    <span className="text-foreground/70 text-xs w-4">{i + 1}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[#FAFAFA] text-sm truncate group-hover:text-[#E5192A] transition-colors">
+                      <p className="text-foreground text-sm truncate group-hover:text-[#E5192A] transition-colors">
                         {topic.topic}
                       </p>
-                      <p className="text-[#555555] text-xs">{topic.source}</p>
+                      <p className="text-muted-foreground text-xs">{topic.source}</p>
                     </div>
                     <div className="text-[#E5192A] text-xs font-semibold">
                       {topic.score}
@@ -178,9 +178,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-[#111111] border border-[#222222] rounded-xl p-5">
-            <h3 className="text-[#FAFAFA] font-bold mb-4 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#888888]" />
+          <div className="bg-card border border-border rounded-xl p-5">
+            <h3 className="text-foreground font-bold mb-4 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-muted-foreground" />
               Recent Activity
             </h3>
             {activityLoading ? (
@@ -190,7 +190,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : activity.length === 0 ? (
-              <p className="text-[#555555] text-sm">No recent activity.</p>
+              <p className="text-muted-foreground text-sm">No recent activity.</p>
             ) : (
               <div className="space-y-2">
                 {activity.slice(0, 8).map((item) => (
@@ -203,16 +203,16 @@ export default function DashboardPage() {
                           <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
                         </div>
                       ) : (
-                        <div className="w-3.5 h-3.5 rounded-full bg-[#333333] flex items-center justify-center">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#666666]" />
+                        <div className="w-3.5 h-3.5 rounded-full bg-secondary flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[#CCCCCC] text-xs leading-tight">
+                      <p className="text-muted-foreground/70 text-xs leading-tight">
                         {item.message}
                       </p>
-                      <p className="text-[#555555] text-xs mt-0.5">
+                      <p className="text-muted-foreground text-xs mt-0.5">
                         {timeAgo(item.created_at)}
                       </p>
                     </div>

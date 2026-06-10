@@ -31,10 +31,10 @@ export function LoadingSpinner({
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A0A0A]/80 backdrop-blur-sm">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-12 w-12 rounded-full border-[3px] border-[#222222] border-t-[#E5192A] animate-spin" />
-          <p className="text-sm text-[#888888]">Loading...</p>
+          <div className="h-12 w-12 rounded-full border-[3px] border-border border-t-[#E5192A] animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
     )
@@ -47,7 +47,7 @@ export function LoadingSkeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "rounded-md bg-[#1A1A1A] shimmer-bg animate-pulse",
+        "rounded-md bg-muted shimmer-bg animate-pulse",
         className
       )}
     />

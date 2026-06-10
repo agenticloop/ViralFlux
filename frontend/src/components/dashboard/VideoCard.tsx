@@ -38,9 +38,9 @@ export default function VideoCard({ video, channelName }: VideoCardProps) {
   }
 
   return (
-    <div className="bg-[#111111] border border-[#222222] rounded-xl overflow-hidden hover:border-[#333333] transition-all duration-200 group">
+    <div className="bg-card border border-border rounded-xl overflow-hidden hover:border-border transition-all duration-200 group">
       {/* Thumbnail */}
-      <div className="relative aspect-[9/16] max-h-48 bg-[#1A1A1A] overflow-hidden flex items-center justify-center">
+      <div className="relative aspect-[9/16] max-h-48 bg-muted overflow-hidden flex items-center justify-center">
         {video.video_path ? (
           <video
             src={video.video_path}
@@ -49,9 +49,9 @@ export default function VideoCard({ video, channelName }: VideoCardProps) {
             preload="metadata"
           />
         ) : (
-          <div className="flex flex-col items-center gap-2 text-[#333333]">
+          <div className="flex flex-col items-center gap-2 text-foreground/60">
             <Play className="w-8 h-8" />
-            <span className="text-xs text-[#444444] capitalize">
+            <span className="text-xs text-foreground/70 capitalize">
               {video.status}
             </span>
           </div>
@@ -64,7 +64,7 @@ export default function VideoCard({ video, channelName }: VideoCardProps) {
 
         {/* Format badge */}
         <div className="absolute top-2 right-2">
-          <span className="text-xs bg-black/70 text-[#CCCCCC] px-2 py-0.5 rounded-full">
+          <span className="text-xs bg-black/70 text-muted-foreground/70 px-2 py-0.5 rounded-full">
             {video.format_slug?.replace("_", " ") ?? "Unknown"}
           </span>
         </div>
@@ -73,17 +73,17 @@ export default function VideoCard({ video, channelName }: VideoCardProps) {
       {/* Content */}
       <div className="p-4">
         {/* Title */}
-        <h3 className="text-[#FAFAFA] font-semibold text-sm mb-1 truncate">
+        <h3 className="text-foreground font-semibold text-sm mb-1 truncate">
           {video.seo_title ?? video.topic ?? "Untitled Short"}
         </h3>
 
         {/* Channel */}
         {channelName && (
-          <p className="text-[#666666] text-xs mb-2">{channelName}</p>
+          <p className="text-muted-foreground text-xs mb-2">{channelName}</p>
         )}
 
         {/* Meta */}
-        <div className="flex items-center gap-3 text-xs text-[#555555] mb-3">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
           {video.cost_usd !== null && (
             <span className="flex items-center gap-1">
               <DollarSign className="w-3 h-3" />

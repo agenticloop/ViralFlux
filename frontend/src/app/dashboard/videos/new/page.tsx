@@ -107,24 +107,24 @@ export default function NewVideoPage() {
       {/* Back */}
       <Link
         href="/dashboard/videos"
-        className="inline-flex items-center gap-2 text-[#888888] hover:text-[#FAFAFA] text-sm mb-6 transition-colors"
+        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Videos
       </Link>
 
       <div className="mb-6">
-        <h1 className="text-[#FAFAFA] font-bold text-2xl">
+        <h1 className="text-foreground font-bold text-2xl">
           Create New Short
         </h1>
-        <p className="text-[#888888] text-sm mt-1">
+        <p className="text-muted-foreground text-sm mt-1">
           Configure and queue a new AI-generated YouTube Short.
         </p>
       </div>
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="bg-[#111111] border border-[#222222] rounded-xl p-6 space-y-5"
+        className="bg-card border border-border rounded-xl p-6 space-y-5"
       >
         {/* Channel */}
         <div className="space-y-1.5">
@@ -173,19 +173,19 @@ export default function NewVideoPage() {
         <div className="space-y-1.5">
           <Label>
             Topic{" "}
-            <span className="text-[#555555] text-xs">(optional)</span>
+            <span className="text-muted-foreground text-xs">(optional)</span>
           </Label>
           <Input
             placeholder="e.g. The abandoned hospital in Chicago..."
             {...register("topic")}
           />
-          <p className="text-[#555555] text-xs">
+          <p className="text-muted-foreground text-xs">
             Leave empty to let AI pick a trending topic automatically.
           </p>
         </div>
 
         {/* Voice Override */}
-        <div className="space-y-3 p-4 bg-[#0A0A0A] rounded-lg border border-[#1A1A1A]">
+        <div className="space-y-3 p-4 bg-background rounded-lg border border-border">
           <div className="flex items-center justify-between">
             <Label>Override Voice Settings</Label>
             <Switch
@@ -235,11 +235,11 @@ export default function NewVideoPage() {
         </div>
 
         {/* Post schedule */}
-        <div className="space-y-3 p-4 bg-[#0A0A0A] rounded-lg border border-[#1A1A1A]">
+        <div className="space-y-3 p-4 bg-background rounded-lg border border-border">
           <div className="flex items-center justify-between">
             <div>
               <Label>Post Immediately When Ready</Label>
-              <p className="text-[#555555] text-xs mt-0.5">
+              <p className="text-muted-foreground text-xs mt-0.5">
                 Post as soon as generation completes, skipping approval
               </p>
             </div>
@@ -255,7 +255,7 @@ export default function NewVideoPage() {
               <Input
                 type="datetime-local"
                 {...register("scheduled_for")}
-                className="text-[#FAFAFA]"
+                className="text-foreground"
               />
             </div>
           )}
@@ -265,13 +265,13 @@ export default function NewVideoPage() {
         <div className="flex items-center gap-3 p-3 bg-green-900/10 border border-green-900/20 rounded-lg">
           <DollarSign className="w-5 h-5 text-green-400" />
           <div>
-            <p className="text-[#FAFAFA] text-sm">
+            <p className="text-foreground text-sm">
               Estimated cost:{" "}
               <strong className="text-green-400">
                 ~${estimatedCost.toFixed(2)}
               </strong>
             </p>
-            <p className="text-[#555555] text-xs">
+            <p className="text-muted-foreground text-xs">
               Includes AI script + voice generation
             </p>
           </div>

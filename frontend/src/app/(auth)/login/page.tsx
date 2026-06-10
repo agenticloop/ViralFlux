@@ -52,10 +52,10 @@ export default function LoginPage() {
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#FAFAFA] mb-1">
+        <h1 className="text-2xl font-bold text-foreground mb-1">
           Welcome back
         </h1>
-        <p className="text-[#888888] text-sm">
+        <p className="text-muted-foreground text-sm">
           Sign in to your ViralFlux account
         </p>
       </div>
@@ -99,7 +99,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555555] hover:text-[#888888] transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground transition-colors"
             >
               {showPassword ? (
                 <EyeOff className="w-4 h-4" />
@@ -118,10 +118,10 @@ export default function LoginPage() {
           <input
             type="checkbox"
             id="rememberMe"
-            className="w-4 h-4 rounded border-[#333333] bg-[#111111] accent-[#E5192A]"
+            className="w-4 h-4 rounded border-border bg-card accent-[#E5192A]"
             {...register("rememberMe")}
           />
-          <Label htmlFor="rememberMe" className="text-sm text-[#888888] cursor-pointer">
+          <Label htmlFor="rememberMe" className="text-sm text-muted-foreground cursor-pointer">
             Remember me for 30 days
           </Label>
         </div>
@@ -152,7 +152,7 @@ export default function LoginPage() {
       </form>
 
       {/* Register link */}
-      <p className="mt-6 text-center text-sm text-[#888888]">
+      <p className="mt-6 text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
         <Link
           href="/register"

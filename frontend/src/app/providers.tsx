@@ -24,6 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       attribute="class"
       defaultTheme="dark"
       enableSystem={false}
+      storageKey="viralflux-theme"
       disableTransitionOnChange={false}
     >
       <QueryClientProvider client={queryClient}>

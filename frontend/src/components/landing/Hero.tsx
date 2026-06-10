@@ -26,13 +26,13 @@ function MockDashboard() {
       <div className="absolute inset-0 bg-[#E5192A]/10 rounded-2xl blur-3xl" />
 
       {/* Dashboard Card */}
-      <div className="relative bg-[#0F0F0F] border border-[#222222] rounded-2xl overflow-hidden shadow-2xl">
+      <div className="relative bg-background border border-border rounded-2xl overflow-hidden shadow-2xl">
         {/* Header */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-[#1A1A1A]">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
           <div className="w-3 h-3 rounded-full bg-[#E5192A]" />
           <div className="w-3 h-3 rounded-full bg-yellow-500" />
           <div className="w-3 h-3 rounded-full bg-green-500" />
-          <span className="ml-2 text-[#444444] text-xs">ViralFlux Dashboard</span>
+          <span className="ml-2 text-foreground/70 text-xs">ViralFlux Dashboard</span>
         </div>
 
         {/* Stats Row */}
@@ -42,10 +42,10 @@ function MockDashboard() {
             { icon: Zap, label: "Videos", value: "847" },
             { icon: DollarSign, label: "Cost", value: "$68.90" },
           ].map(({ icon: Icon, label, value }) => (
-            <div key={label} className="bg-[#111111] rounded-lg p-3 border border-[#1A1A1A]">
+            <div key={label} className="bg-card rounded-lg p-3 border border-border">
               <Icon className="w-3 h-3 text-[#E5192A] mb-1" />
               <div className="text-white text-sm font-bold">{value}</div>
-              <div className="text-[#555555] text-xs">{label}</div>
+              <div className="text-muted-foreground text-xs">{label}</div>
             </div>
           ))}
         </div>
@@ -57,13 +57,13 @@ function MockDashboard() {
             { title: "Dark Forest Secret", status: "generating", cost: "$0.09" },
             { title: "Unknown Caller", status: "queued", cost: "$0.07" },
           ].map((video) => (
-            <div key={video.title} className="flex items-center gap-3 bg-[#111111] rounded-lg p-3 border border-[#1A1A1A]">
-              <div className="w-10 h-10 bg-[#1A1A1A] rounded-md flex items-center justify-center flex-shrink-0">
+            <div key={video.title} className="flex items-center gap-3 bg-card rounded-lg p-3 border border-border">
+              <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
                 <Play className="w-4 h-4 text-[#E5192A] fill-[#E5192A]" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[#FAFAFA] text-xs font-medium truncate">{video.title}</div>
-                <div className="text-[#555555] text-xs">{video.cost}</div>
+                <div className="text-foreground text-xs font-medium truncate">{video.title}</div>
+                <div className="text-muted-foreground text-xs">{video.cost}</div>
               </div>
               <span
                 className={`text-xs px-2 py-0.5 rounded-full ${
@@ -86,7 +86,7 @@ function MockDashboard() {
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center pt-16 bg-[#0A0A0A] overflow-hidden">
+    <section className="relative min-h-screen flex items-center pt-16 bg-background overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-gradient-radial from-[#E5192A]/8 via-transparent to-transparent" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#E5192A]/5 rounded-full blur-[120px]" />
@@ -126,7 +126,7 @@ export default function Hero() {
             {/* Headline */}
             <motion.h1
               variants={fadeUp}
-              className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#FAFAFA] leading-[1.05] tracking-tight mb-6"
+              className="text-4xl sm:text-5xl lg:text-6xl font-black text-foreground leading-[1.05] tracking-tight mb-6"
             >
               Automate Your{" "}
               <span className="text-gradient-red">YouTube Shorts</span>{" "}
@@ -136,11 +136,11 @@ export default function Hero() {
             {/* Subline */}
             <motion.p
               variants={fadeUp}
-              className="text-lg sm:text-xl text-[#888888] leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0"
+              className="text-lg sm:text-xl text-muted-foreground leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0"
             >
               AI-powered story generation &rarr; auto voice &rarr; auto post.
               <br />
-              <span className="text-[#FAFAFA] font-semibold">
+              <span className="text-foreground font-semibold">
                 Under $0.10 per video.
               </span>{" "}
               No video skills required.
@@ -161,7 +161,7 @@ export default function Hero() {
                 variant="outline"
                 size="lg"
                 asChild
-                className="text-base px-8 border-[#333333] text-[#FAFAFA] hover:border-[#E5192A]"
+                className="text-base px-8 border-border text-foreground hover:border-[#E5192A]"
               >
                 <Link href="#how-it-works" className="flex items-center gap-2">
                   <Play className="w-4 h-4" />
@@ -171,10 +171,10 @@ export default function Hero() {
             </motion.div>
 
             {/* Social Proof Micro */}
-            <motion.p variants={fadeUp} className="mt-6 text-[#555555] text-sm">
+            <motion.p variants={fadeUp} className="mt-6 text-muted-foreground text-sm">
               Trusted by{" "}
-              <span className="text-[#FAFAFA]">847+ channels</span> &bull;{" "}
-              <span className="text-[#FAFAFA]">12,450+ Shorts</span> generated
+              <span className="text-foreground">847+ channels</span> &bull;{" "}
+              <span className="text-foreground">12,450+ Shorts</span> generated
             </motion.p>
           </motion.div>
 

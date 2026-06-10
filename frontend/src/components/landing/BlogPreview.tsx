@@ -37,7 +37,7 @@ const staticPosts = [
 
 export default function BlogPreview() {
   return (
-    <section className="py-20 bg-[#0A0A0A]">
+    <section className="py-20 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -50,11 +50,11 @@ export default function BlogPreview() {
             <span className="text-[#E5192A] text-sm font-semibold uppercase tracking-wider mb-3 block">
               Blog
             </span>
-            <h2 className="text-3xl sm:text-4xl font-black text-[#FAFAFA]">
+            <h2 className="text-3xl sm:text-4xl font-black text-foreground">
               Creator Resources
             </h2>
           </div>
-          <Button variant="ghost" asChild className="text-[#888888] hover:text-[#FAFAFA] hidden sm:flex">
+          <Button variant="ghost" asChild className="text-muted-foreground hover:text-foreground hidden sm:flex">
             <Link href="/blog" className="flex items-center gap-1">
               View All <ArrowRight className="w-4 h-4" />
             </Link>
@@ -73,7 +73,7 @@ export default function BlogPreview() {
               className="group"
             >
               <Link href={`/blog/${post.slug}`}>
-                <div className="bg-[#111111] border border-[#222222] rounded-xl p-6 hover:border-[#E5192A]/40 transition-all duration-300 h-full flex flex-col">
+                <div className="bg-card border border-border rounded-xl p-6 hover:border-[#E5192A]/40 transition-all duration-300 h-full flex flex-col">
                   {/* Tags */}
                   <div className="flex gap-2 mb-4">
                     {post.tags.map((tag) => (
@@ -87,17 +87,17 @@ export default function BlogPreview() {
                   </div>
 
                   {/* Title */}
-                  <h3 className="text-[#FAFAFA] font-bold text-lg leading-tight mb-3 group-hover:text-[#E5192A] transition-colors flex-1">
+                  <h3 className="text-foreground font-bold text-lg leading-tight mb-3 group-hover:text-[#E5192A] transition-colors flex-1">
                     {post.title}
                   </h3>
 
                   {/* Excerpt */}
-                  <p className="text-[#666666] text-sm leading-relaxed mb-4">
+                  <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                     {post.excerpt}
                   </p>
 
                   {/* Meta */}
-                  <div className="flex items-center gap-3 text-xs text-[#555555]">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <Clock className="w-3 h-3" />
                     <span>{post.readingTime} min read</span>
                     <span>&bull;</span>
