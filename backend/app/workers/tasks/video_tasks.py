@@ -114,14 +114,7 @@ async def _generate_video_async(job_id: str) -> None:
             if require_approval and schedule and schedule.approval_email:
                 from app.services.email_service import EmailService
 
-                email_svc = EmailService(
-                    settings.SMTP_HOST,
-                    settings.SMTP_PORT,
-                    settings.SMTP_USER,
-                    settings.SMTP_PASSWORD,
-                    settings.SMTP_FROM_NAME,
-                    settings.SMTP_FROM_EMAIL,
-                )
+                email_svc = EmailService()
                 preview_url = f"{settings.APP_URL}/media/previews/{job_id}.mp4"
                 await email_svc.send_approval_request(
                     schedule.approval_email,

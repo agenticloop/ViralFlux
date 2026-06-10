@@ -24,13 +24,9 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # SMTP
-    SMTP_HOST: str = "smtp.gmail.com"
-    SMTP_PORT: int = 587
-    SMTP_USER: str = ""
-    SMTP_PASSWORD: str = ""
-    SMTP_FROM_NAME: str = "ViralFlux"
-    SMTP_FROM_EMAIL: str = ""
+    # Resend (transactional email)
+    RESEND_API_KEY: str = ""
+    EMAIL_FROM: str = "ViralFlux <noreply@skypulseforge.com>"
 
     # LLMs
     GOOGLE_AI_API_KEY: str = ""

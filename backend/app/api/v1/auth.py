@@ -45,28 +45,14 @@ def _get_redis() -> aioredis.Redis:
     return aioredis.from_url(settings.REDIS_URL, decode_responses=True)
 
 
-async def _send_otp_email(email: str, otp: str, subject: str, body_template: str) -> None:
-    """Send OTP via SMTP. Fails silently in dev if SMTP not configured."""
-    if not settings.SMTP_USER:
-        logger.warning("SMTP not configured — OTP for %s: %s", email, otp)
+async def _send_otp_email(email: str, otp: str, purpose: str = "verification") -> None:
+    """Send OTP via Resend. Logs the OTP to console when API key is not set (dev mode)."""
+    from app.services.email_service import EmailService
+    if not settings.RESEND_API_KEY:
+        logger.warning("RESEND_API_KEY not set — OTP for %s: %s", email, otp)
         return
     try:
-        import aiosmtplib
-        from email.mime.text import MIMEText
-
-        msg = MIMEText(body_template.format(otp=otp), "plain")
-        msg["Subject"] = subject
-        msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
-        msg["To"] = email
-
-        await aiosmtplib.send(
-            msg,
-            hostname=settings.SMTP_HOST,
-            port=settings.SMTP_PORT,
-            username=settings.SMTP_USER,
-            password=settings.SMTP_PASSWORD,
-            start_tls=True,
-        )
+        await EmailService().send_otp(email, otp, purpose)
     except Exception as exc:
         logger.error("Failed to send OTP email to %s: %s", email, exc)
 
@@ -99,16 +85,7 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     finally:
         await redis.aclose()
 
-    await _send_otp_email(
-        email=payload.email,
-        otp=otp,
-        subject="Verify your ViralFlux account",
-        body_template=(
-            "Welcome to ViralFlux!\n\n"
-            "Your verification code is: {otp}\n\n"
-            "This code expires in 15 minutes.\n"
-        ),
-    )
+    await _send_otp_email(email=payload.email, otp=otp, purpose="verification")
 
     return MessageResponse(message="Registration successful. Check your email for the OTP.")
 
@@ -256,17 +233,7 @@ async def forgot_password(
         finally:
             await redis.aclose()
 
-        await _send_otp_email(
-            email=payload.email,
-            otp=otp,
-            subject="ViralFlux Password Reset",
-            body_template=(
-                "You requested a password reset.\n\n"
-                "Your reset code is: {otp}\n\n"
-                "This code expires in 15 minutes.\n"
-                "If you did not request this, ignore this email.\n"
-            ),
-        )
+        await _send_otp_email(email=payload.email, otp=otp, purpose="password_reset")
 
     return MessageResponse(
         message="If that email exists, a reset code has been sent."
