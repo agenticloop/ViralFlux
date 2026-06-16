@@ -21,6 +21,7 @@ from app.core.security import (
 )
 from app.models.plan import Plan
 from app.models.user import User
+from app.services import credit_service
 from app.schemas.auth import (
     ForgotPasswordRequest,
     LoginRequest,
@@ -65,18 +66,22 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
             status_code=status.HTTP_409_CONFLICT, detail="Email already registered."
         )
 
-    # Assign starter plan by default
-    plan_result = await db.execute(select(Plan).where(Plan.name == "starter"))
-    starter_plan = plan_result.scalar_one_or_none()
+    # Assign the free plan by default and grant its starting credits.
+    plan_result = await db.execute(select(Plan).where(Plan.name == "free"))
+    free_plan = plan_result.scalar_one_or_none()
 
     user = User(
         email=payload.email,
         password_hash=hash_password(payload.password),
         full_name=payload.full_name,
-        plan_id=starter_plan.id if starter_plan else None,
+        plan_id=free_plan.id if free_plan else None,
     )
     db.add(user)
     await db.flush()
+
+    if free_plan:
+        await credit_service.grant_subscription_credits(db, user, free_plan)
+        await db.flush()
 
     otp = generate_otp()
     redis = _get_redis()
@@ -111,6 +116,15 @@ async def verify_otp(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
     user.is_verified = True
+
+    # Ensure the user is on the free plan with their starting credits granted.
+    if user.plan_id is None or user.credits_period_start is None:
+        plan_result = await db.execute(select(Plan).where(Plan.name == "free"))
+        free_plan = plan_result.scalar_one_or_none()
+        if free_plan:
+            user.plan_id = free_plan.id
+            await credit_service.grant_subscription_credits(db, user, free_plan)
+    await db.flush()
 
     redis = _get_redis()
     try:

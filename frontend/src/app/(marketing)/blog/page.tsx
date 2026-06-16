@@ -37,10 +37,10 @@ const staticPosts = [
     date: "May 28, 2026",
   },
   {
-    slug: "elevenlabs-vs-openai-voices-for-youtube",
-    title: "ElevenLabs vs OpenAI Voices for YouTube Shorts: Which Wins?",
+    slug: "best-elevenlabs-voices-for-youtube-shorts",
+    title: "The Best ElevenLabs Voices for YouTube Shorts: Horror vs Brainrot",
     excerpt:
-      "We tested both voice providers across 200 Shorts and tracked retention, comments, and subscriber growth. Here are the results.",
+      "We tested dozens of ElevenLabs voices across 200 Shorts and tracked retention, comments, and subscriber growth. Here are the winners per genre.",
     tags: ["Tools", "Voice"],
     readingTime: 7,
     date: "May 22, 2026",

@@ -38,6 +38,17 @@ services:
     networks:
       - viralflux
 
+  # ── Shared v2 environment ──────────────────────────────────────────────────
+  # backend, worker and beat run the SAME image and need the SAME env. The full
+  # set is loaded from .env via `env_file`; the `environment` block below is an
+  # explicit, self-documenting view of the v2 stack (Gemini-only LLM, ElevenLabs
+  # TTS, Imagen images, direct YouTube OAuth, credits). It is kept in YAML anchor
+  # `&app_env` so backend/worker/beat stay in lock-step.
+  #
+  # REMOVED in v2 (no longer referenced anywhere): OPENAI_API_KEY, REDDIT_*,
+  # POSTPROXY_*, EDGE_TTS_*, GOOGLE_TTS_*, PEXELS_API_KEY, PIXABAY_API_KEY,
+  # UNSPLASH_ACCESS_KEY.
+
   backend:
     build:
       context: ./backend
@@ -45,6 +56,41 @@ services:
     container_name: backend
     restart: unless-stopped
     env_file: .env
+    environment: &app_env
+      # App / URLs
+      APP_ENV: ${APP_ENV}
+      APP_URL: ${APP_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      TIMEZONE: ${TIMEZONE}
+      # Datastores
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+      # LLM — Gemini ONLY, 3 env-configured tiers
+      GOOGLE_AI_API_KEY: ${GOOGLE_AI_API_KEY}
+      GEMINI_MODEL_LITE: ${GEMINI_MODEL_LITE}
+      GEMINI_MODEL_BALANCED: ${GEMINI_MODEL_BALANCED}
+      GEMINI_MODEL_MAX: ${GEMINI_MODEL_MAX}
+      # TTS — ElevenLabs ONLY
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
+      ELEVENLABS_MODEL: ${ELEVENLABS_MODEL}
+      ELEVENLABS_BASE_URL: ${ELEVENLABS_BASE_URL}
+      # Images — Imagen 4 Fast
+      IMAGE_PROVIDER: ${IMAGE_PROVIDER}
+      IMAGEN_MODEL: ${IMAGEN_MODEL}
+      # YouTube — direct OAuth, multi-account (no PostProxy)
+      YOUTUBE_CLIENT_ID: ${YOUTUBE_CLIENT_ID}
+      YOUTUBE_CLIENT_SECRET: ${YOUTUBE_CLIENT_SECRET}
+      YOUTUBE_REDIRECT_URI: ${YOUTUBE_REDIRECT_URI}
+      # Video processing
+      FFMPEG_PATH: ${FFMPEG_PATH}
+      FFPROBE_PATH: ${FFPROBE_PATH}
+      WHISPER_MODEL: ${WHISPER_MODEL}
+      VIDEO_RESOLUTION: ${VIDEO_RESOLUTION}
+      # Storage (footage/music in assets, renders in media)
+      MEDIA_DIR: ${MEDIA_DIR}
+      ASSETS_DIR: ${ASSETS_DIR}
     command: >
       sh -c "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
@@ -67,7 +113,33 @@ services:
     container_name: worker
     restart: unless-stopped
     env_file: .env
+    environment: *app_env
     command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    volumes:
+      - ./media:/app/media
+      - ./assets:/app/assets:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - viralflux
+
+  # ── Celery BEAT scheduler ──────────────────────────────────────────────────
+  # PRIMARY scheduler for the platform. Runs the DB-driven beat tasks defined in
+  # app/workers/celery_app.py: `scan_schedules` (every 5 min → enqueues due
+  # posts) and `sync_analytics` (daily). REQUIRED for posting automation — n8n
+  # is only a thin supplementary automator (see n8n/README.md).
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: beat
+    restart: unless-stopped
+    env_file: .env
+    environment: *app_env
+    command: celery -A app.workers.celery_app beat --loglevel=info
     volumes:
       - ./media:/app/media
       - ./assets:/app/assets:ro

@@ -1,15 +1,14 @@
-from .base import LLMService, ScriptResult, SEOResult, TopicResult
-from .gemini import GeminiService, get_gemini
-from .openai_svc import OpenAIService, LLMError, get_openai
+from __future__ import annotations
+
+from .base import LLMService, ScriptResult, SEOResult
+from .gemini import GeminiService, LLMError, gemini_service, get_gemini
 
 __all__ = [
     "LLMService",
     "ScriptResult",
     "SEOResult",
-    "TopicResult",
     "GeminiService",
-    "get_gemini",
-    "OpenAIService",
     "LLMError",
-    "get_openai",
+    "gemini_service",
+    "get_gemini",
 ]

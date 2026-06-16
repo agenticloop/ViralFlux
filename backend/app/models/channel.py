@@ -34,25 +34,39 @@ class YoutubeChannel(Base):
         index=True,
     )
     channel_name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    # ---- Direct YouTube OAuth (our own app, multi-Google-account) -------
+    # Each channel stores its OWN Google account's encrypted tokens, so a
+    # single user can connect channels across several Google accounts.
     youtube_channel_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    youtube_channel_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    youtube_thumbnail_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    google_account_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     oauth_access_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     oauth_refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     oauth_expiry: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    postproxy_profile_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    default_voice_provider: Mapped[str] = mapped_column(
-        String(50), default="edge-tts", nullable=False
+    oauth_state: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+
+    # ---- Content configuration -----------------------------------------
+    genre: Mapped[str] = mapped_column(String(50), default="horror", nullable=False)
+    seed_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    seed_prompt_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
-    default_voice_id: Mapped[str] = mapped_column(
-        String(100), default="en-US-GuyNeural", nullable=False
+    default_model_tier: Mapped[str] = mapped_column(
+        String(20), default="Lite", nullable=False
     )
-    default_music_category: Mapped[str] = mapped_column(
+    default_duration: Mapped[str] = mapped_column(String(10), default="30s", nullable=False)
+    voice_id: Mapped[str] = mapped_column(
+        String(100), default="pqHfZKP75CvOlQylNhV4", nullable=False
+    )
+    voice_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    music_bucket: Mapped[str] = mapped_column(
         String(50), default="horror_ambient", nullable=False
     )
-    default_format: Mapped[str] = mapped_column(
-        String(50), default="horror_story", nullable=False
-    )
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -69,6 +83,10 @@ class YoutubeChannel(Base):
     video_jobs: Mapped[list] = relationship(
         "VideoJob", back_populates="channel", lazy="noload"
     )
+
+    @property
+    def youtube_connected(self) -> bool:
+        return bool(self.oauth_refresh_token)
 
 
 class ChannelSchedule(Base):
@@ -93,7 +111,19 @@ class ChannelSchedule(Base):
     )
     require_approval: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     approval_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    auto_topic: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Free plan: one fixed-length block with manual renewal; paid: continuous.
+    block_ends_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_run_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    next_run_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    # Optional explicit topic/seed queue to consume before falling back to the
+    # channel's weekly seed prompt.
     topics_queue: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

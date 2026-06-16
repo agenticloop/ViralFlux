@@ -6,8 +6,10 @@ from decimal import Decimal
 
 from sqlalchemy import (
     ARRAY,
+    JSON,
     DateTime,
     ForeignKey,
+    Integer,
     Numeric,
     String,
     Text,
@@ -30,6 +32,9 @@ VIDEO_JOB_STATUSES = (
     "rejected",
 )
 
+# How the script was obtained.
+SCRIPT_SOURCES = ("manual", "seed", "ai")
+
 
 class VideoJob(Base):
     __tablename__ = "video_jobs"
@@ -49,22 +54,39 @@ class VideoJob(Base):
         nullable=False,
         index=True,
     )
-    format_slug: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    # ---- Generation configuration --------------------------------------
+    genre: Mapped[str] = mapped_column(String(50), nullable=False, default="horror")
+    duration_tier: Mapped[str] = mapped_column(String(10), nullable=False, default="30s")
+    model_tier: Mapped[str] = mapped_column(String(20), nullable=False, default="Lite")
+    script_source: Mapped[str] = mapped_column(String(20), nullable=False, default="ai")
+
     status: Mapped[str] = mapped_column(
         String(50), default="queued", nullable=False, index=True
     )
-    topic: Mapped[str | None] = mapped_column(Text, nullable=True)
-    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    script: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # ---- Content -------------------------------------------------------
+    topic: Mapped[str | None] = mapped_column(Text, nullable=True)   # seed/idea
+    script: Mapped[str | None] = mapped_column(Text, nullable=True)  # final narration
+    scene_plan: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # scenes + image prompts
+    word_timestamps: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # for captions
     seo_title: Mapped[str | None] = mapped_column(String(100), nullable=True)
     seo_description: Mapped[str | None] = mapped_column(Text, nullable=True)
     seo_tags: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
-    voice_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    # ---- Voice ---------------------------------------------------------
     voice_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    voice_settings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    # ---- Output --------------------------------------------------------
     video_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     youtube_video_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     youtube_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 4), nullable=True)
+
+    # ---- Accounting ----------------------------------------------------
+    credits_cost: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 4), nullable=True)  # internal
+
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     approval_token: Mapped[str | None] = mapped_column(
         String(100), nullable=True, index=True

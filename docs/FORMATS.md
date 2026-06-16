@@ -1,6 +1,8 @@
-# ViralFlux — Format Plugin Documentation
+# ViralFlux — Genres & Genre Handlers
 
-ViralFlux is built around a pluggable content format system. Every type of YouTube Short is implemented as a **Format Plugin** — a self-contained class that knows how to generate a script, select media assets, configure audio, and estimate its own cost. The core video pipeline is format-agnostic; it delegates all content decisions to the active plugin.
+ViralFlux organizes content into **genres**. In v2 the three genres are **Horror**, **Brainrot**, and **Custom** (Pro/Agency). Each genre is implemented as a self-contained handler that knows how to generate a script + SEO (Gemini), pick its visual path (Imagen images for Horror, CC0 footage for Brainrot), configure audio (ElevenLabs voice + CC0 music), and report the credit cost. The core video pipeline is genre-agnostic; it delegates all content decisions to the active genre handler.
+
+> **v2 note:** the old open-ended "format plugin" list (ranking, motivational, clip-stitch, news, etc.) is gone, as are its dependencies: OpenAI for SEO, Pexels/Pixabay/Unsplash for images, edge-tts/Google TTS for voice, and Reddit/subreddit scraping for topics. Everything below reflects the current single-LLM (Gemini), single-TTS (ElevenLabs), Imagen-or-footage stack. The base class still lives at `backend/app/services/formats/base.py`; only the providers and the genre set changed.
 
 ---
 
@@ -29,11 +31,10 @@ class FormatOutput:
     seo_title: str                 # YouTube title (max 70 chars)
     seo_description: str           # YouTube description (max 300 chars)
     seo_tags: list[str]            # 15 SEO tags
-    voice_provider: str            # e.g., "edge-tts", "elevenlabs", "google-tts"
-    voice_id: str                  # Provider-specific voice ID
+    voice_id: str                  # ElevenLabs voice ID (only provider)
     music_category: str            # Music folder slug (e.g., "horror_ambient")
     pipeline_steps: list[str]      # Steps the video pipeline should run
-    cost_estimate_usd: Decimal     # Estimated LLM + TTS cost for this job
+    credit_cost: int               # Credits debited for this job (see pricing.py)
 
 
 class FormatPlugin(ABC):
@@ -63,9 +64,10 @@ class FormatPlugin(ABC):
     @property
     @abstractmethod
     def min_plan(self) -> str:
-        """Minimum plan slug required to use this format.
-        
-        One of: 'starter', 'creator', 'agency'.
+        """Minimum plan slug required to use this genre.
+
+        One of: 'free', 'starter', 'pro', 'agency'.
+        (Custom genres are gated to 'pro' and above.)
         """
         ...
 
@@ -96,81 +98,69 @@ class FormatPlugin(ABC):
         Args:
             topic: User-supplied topic string, or None for AI selection.
             channel_config: Dict with keys:
-                - voice_provider (str): TTS provider for this channel
-                - voice_id (str): TTS voice ID
-                - music_category (str): Preferred music category
-        
+                - voice_id (str): ElevenLabs voice ID
+                - music_category (str): Preferred music bucket
+                - model_tier (str): "Lite" | "Balanced" | "Max"
+                - duration (str): one of "20s" | "30s" | "60s" | "120s" | "150s"
+
         Returns:
             FormatOutput with all fields populated.
         """
         ...
 
     def get_pipeline_steps(self) -> list[str]:
-        """Return the list of VideoPipeline steps this format needs.
-        
-        Override to skip steps your format does not use.
-        Default returns all steps.
+        """Return the list of VideoPipeline steps this genre needs.
+
+        Override to skip steps your genre does not use.
+        Default returns the full Horror path.
 
         Available steps:
-            "images"    - Fetch stock images from Pexels/Pixabay
-            "tts"       - Synthesize voice audio from script
-            "captions"  - Generate SRT from voice audio (Whisper)
-            "assemble"  - Run FFmpeg assembly (Ken Burns + concat + mix + captions)
+            "images"    - Generate images with Imagen 4 Fast (Horror)
+            "footage"   - Pull a CC0 clip from assets/footage/<bucket> (Brainrot)
+            "tts"       - Synthesize voice + word timestamps (ElevenLabs)
+            "captions"  - Build captions from ElevenLabs timestamps (Whisper fallback)
+            "assemble"  - Run FFmpeg assembly (visuals + mix + captions)
 
-        For example, a text-overlay-only format might return ["tts", "assemble"]
-        and skip image sourcing.
+        For example, Brainrot returns ["footage", "tts", "captions", "assemble"]
+        and skips image generation.
         """
         return ["images", "tts", "captions", "assemble"]
 
-    def estimate_cost(self, script_char_count: int, voice_provider: str) -> Decimal:
-        """Estimate the USD cost for this generation run.
-        
-        Default implementation uses standard per-provider rates.
-        Override if your format uses additional paid APIs.
-        
+    def credit_cost(self, duration: str, model_tier: str) -> int:
+        """Return the credits to debit for this generation run.
+
+        Credits are the single user-facing unit. The real cost (images + voice,
+        both duration-driven) is abstracted away. This delegates to the single
+        source of truth in pricing.py — do NOT hardcode credit math here.
+
         Args:
-            script_char_count: Character count of the generated script.
-            voice_provider: TTS provider being used.
-        
+            duration: one of "20s" | "30s" | "60s" | "120s" | "150s".
+            model_tier: "Lite" | "Balanced" | "Max".
+
         Returns:
-            Estimated cost in USD as a Decimal.
+            Integer credit cost.
         """
-        tts_cost_per_char = {
-            "elevenlabs": Decimal("0.00000033"),   # ~$0.003 per 900-char script
-            "google-tts": Decimal("0.000004"),     # $4 per 1M chars
-            "edge-tts":   Decimal("0"),            # Free
-        }
-        llm_cost = Decimal("0.0015")               # Gemini script + GPT-4o-mini SEO
-        tts_cost = tts_cost_per_char.get(
-            voice_provider, Decimal("0")
-        ) * script_char_count
-        return llm_cost + tts_cost
+        from app.core.pricing import credits_for_video
+        return credits_for_video(duration, model_tier)
 ```
 
 ---
 
-## Format Config Schema
+## Genre Config Schema
 
-Each format can declare a `config_schema` JSON object that describes its configurable options. This schema is stored in the `content_formats.config_schema` database column and used to render a dynamic settings form in the dashboard.
+Each genre can declare a `config_schema` JSON object that describes its configurable options, rendered as a dynamic settings form in the dashboard. (No Reddit/subreddit options remain — topics come from the user, the channel topic queue, or a Gemini suggestion.)
 
-Example schema for the horror story format:
+Example schema for the Horror genre:
 
 ```json
 {
   "type": "object",
   "properties": {
-    "subreddits": {
-      "type": "array",
-      "items": { "type": "string" },
-      "default": ["nosleep", "creepypasta", "LetsNotMeet"],
-      "description": "Subreddits to scrape for story candidates"
-    },
-    "max_words": {
-      "type": "integer",
-      "minimum": 100,
-      "maximum": 200,
-      "default": 160,
-      "description": "Maximum word count for generated scripts"
+    "image_style": {
+      "type": "string",
+      "enum": ["cinematic", "found-footage", "illustrated"],
+      "default": "cinematic",
+      "description": "Visual style passed to the Imagen prompt"
     },
     "music_volume": {
       "type": "number",
@@ -183,42 +173,45 @@ Example schema for the horror story format:
 }
 ```
 
+For the Brainrot genre, the equivalent schema selects a footage bucket
+(`satisfying`, `parkour_clean`, `hydraulic`, `kinetic_sand`) instead of an image style.
+
 ---
 
-## Plan Gating for Formats
+## Plan Gating for Genres
 
-The `min_plan` property on each plugin controls which subscription tier is required to use the format. The API enforces this check when a video generation request is received.
+The `min_plan` property controls which subscription tier is required to use a genre. The API enforces this when a generation request is received. Per-plan genre access (and the Lite/Balanced/Max model availability) is authoritative in `pricing.md`.
 
-| Format | Slug | Min Plan | Status |
+| Genre | Slug | Min Plan | Notes |
 |---|---|---|---|
-| Horror Story Shorts | `horror_story` | `starter` | Active (Phase 1) |
-| Brainrot Dialogue | `brainrot` | `creator` | Planned (Phase 2) |
-| Ranking / Listicle | `ranking` | `creator` | Planned (Phase 2) |
-| Motivational Quotes | `motivational` | `creator` | Planned (Phase 2) |
-| Clip Stitch Commentary | `clip_stitch` | `agency` | Planned (Phase 2) |
+| Horror | `horror` | `free` | Free picks Horror **or** Brainrot (one, locked per channel) |
+| Brainrot | `brainrot` | `free` | Free can choose this instead of Horror; Starter+ get both |
+| Custom | `custom` | `pro` | User-defined genre; Pro & Agency only |
 
-Users on the Starter plan see locked format cards in the dashboard with an "Upgrade to Creator" prompt.
+Users see locked genre cards in the dashboard with an upgrade prompt when their plan doesn't include a genre.
 
 ---
 
-## Format Registry
+## Genre Registry
 
-Formats are registered in `backend/app/services/formats/registry.py`. The registry maps slugs to plugin instances:
+Genres are registered in `backend/app/services/formats/registry.py`. The registry maps slugs to handler instances:
 
 ```python
-from app.services.formats.horror_story import HorrorStoryPlugin
+from app.services.formats.horror import HorrorPlugin
 from app.services.formats.brainrot import BrainrotPlugin
+from app.services.formats.custom import CustomPlugin
 
 _REGISTRY: dict[str, FormatPlugin] = {
-    "horror_story": HorrorStoryPlugin(),
-    "brainrot":     BrainrotPlugin(),
+    "horror":   HorrorPlugin(),
+    "brainrot": BrainrotPlugin(),
+    "custom":   CustomPlugin(),
 }
 
 
 def get_format_plugin(slug: str) -> FormatPlugin:
     plugin = _REGISTRY.get(slug)
     if plugin is None:
-        raise ValueError(f"Unknown format slug: {slug!r}")
+        raise ValueError(f"Unknown genre slug: {slug!r}")
     return plugin
 
 
@@ -226,220 +219,139 @@ def list_formats() -> list[FormatPlugin]:
     return list(_REGISTRY.values())
 ```
 
-The Celery worker calls `get_format_plugin(job.format_slug)` when a job is processed.
+The Celery worker resolves the handler from the channel's genre when a job is processed.
 
 ---
 
-## Example: Implementing a "News Summary" Format
+## Example: Implementing the Brainrot Genre
 
-This walkthrough creates a new format that summarizes trending news stories as punchy 60-second YouTube Shorts. The format is gated to the Creator plan.
+This walkthrough sketches the Brainrot handler, which uses **Gemini** for script + SEO, **ElevenLabs** for voice, and the **CC0 footage library** for visuals (no image generation). It is available from the Free plan up.
 
-### Step 1: Create the Plugin File
+### Step 1: Create the Handler File
 
-Create `backend/app/services/formats/news_summary.py`:
+Create `backend/app/services/formats/brainrot.py`:
 
 ```python
 from __future__ import annotations
 
 import logging
-from decimal import Decimal
 
 from app.services.formats.base import FormatOutput, FormatPlugin
-from app.services.llm.gemini import GeminiService
-from app.services.llm.openai_svc import OpenAIService
+from app.services.llm.gemini import GeminiService   # the ONLY LLM service
+from app.core.pricing import credits_for_video
 
 logger = logging.getLogger(__name__)
 
 
-class NewsSummaryPlugin(FormatPlugin):
-    """Summarizes a trending news story as a punchy YouTube Short.
-    
-    Pipeline: fetch headline → Gemini rewrites as hook-driven script →
-    GPT-4o-mini generates SEO → edge-tts voice (fast, neutral) →
-    Pexels stock images → captions → final video.
+class BrainrotPlugin(FormatPlugin):
+    """Fast-paced narration over a satisfying CC0 footage loop.
+
+    Pipeline: Gemini writes a punchy script AND the SEO metadata in the
+    selected tier (Lite/Balanced/Max) → ElevenLabs synthesizes voice + word
+    timestamps → a CC0 clip is pulled from assets/footage/<bucket> → captions
+    from the timestamps → FFmpeg assembly. No Imagen, no stock-image vendor.
     """
 
     def __init__(self) -> None:
         self._gemini = GeminiService()
-        self._openai = OpenAIService()
 
     @property
     def slug(self) -> str:
-        return "news_summary"
+        return "brainrot"
 
     @property
     def name(self) -> str:
-        return "News Summary Shorts"
+        return "Brainrot"
 
     @property
     def description(self) -> str:
-        return "Turn trending news stories into punchy 60-second Shorts."
+        return "Punchy narration over satisfying CC0 footage loops."
 
     @property
     def min_plan(self) -> str:
-        return "creator"
+        return "free"
 
     @property
     def default_music_category(self) -> str:
-        return "cinematic_epic"
+        return "upbeat_hype"
+
+    def get_pipeline_steps(self) -> list[str]:
+        # Footage instead of images; no Imagen call.
+        return ["footage", "tts", "captions", "assemble"]
 
     async def prepare(
         self,
         topic: str | None,
         channel_config: dict,
     ) -> FormatOutput:
-        # 1. Determine topic
+        model_tier = channel_config.get("model_tier", "Lite")
+        duration = channel_config.get("duration", "30s")
+
+        # 1. Topic: user-supplied, channel queue, or Gemini suggestion.
         if not topic:
-            # In a full implementation, call a news API here.
-            # For now, Gemini suggests a topic.
-            topic = "Breaking: Major tech company announces AI breakthrough"
+            topic = await self._gemini.suggest_topic(genre="brainrot", tier=model_tier)
 
-        # 2. Generate script — reuse Gemini with a news-specific prompt
-        script_result = await self._generate_news_script(topic)
-
-        # 3. Generate SEO metadata
-        seo_result = await self._openai.generate_seo(
-            script=script_result.script_text,
-            topic=topic,
-            format_slug=self.slug,
+        # 2. Gemini generates BOTH the script and the SEO metadata in one place.
+        result = await self._gemini.generate_script_and_seo(
+            topic=topic, genre="brainrot", tier=model_tier, duration=duration,
         )
-
-        # 4. Determine voice — news works best with a clear neutral voice
-        voice_provider = channel_config.get("voice_provider", "edge-tts")
-        voice_id = channel_config.get("voice_id", "en-US-AriaNeural")
-
-        cost = self.estimate_cost(len(script_result.script_text), voice_provider)
 
         return FormatOutput(
-            script=script_result.script_text,
-            seo_title=seo_result.title,
-            seo_description=seo_result.description,
-            seo_tags=seo_result.tags,
-            voice_provider=voice_provider,
-            voice_id=voice_id,
+            script=result.script_text,
+            seo_title=result.seo_title,
+            seo_description=result.seo_description,
+            seo_tags=result.seo_tags,
+            voice_id=channel_config["voice_id"],            # ElevenLabs voice
             music_category=self.default_music_category,
             pipeline_steps=self.get_pipeline_steps(),
-            cost_estimate_usd=cost,
-        )
-
-    async def _generate_news_script(self, topic: str):
-        """Generate a news-style narration script using Gemini."""
-        import google.generativeai as genai
-        from app.core.config import settings
-
-        genai.configure(api_key=settings.GOOGLE_AI_API_KEY)
-        model = genai.GenerativeModel(settings.GEMINI_MODEL)
-
-        prompt = f"""Write a YouTube Shorts news narration script (max 140 words) about:
-
-Topic: {topic}
-
-Rules:
-1. Open with the most shocking fact — ≤12 words
-2. Three punchy supporting facts (one sentence each)
-3. Close with the implication / what happens next
-4. Neutral, authoritative tone — no opinions
-5. Target: 45–55 seconds at news-anchor pace
-
-Return ONLY valid JSON:
-{{
-  "script_text": "<full narration>",
-  "hook_line": "<opening sentence>",
-  "estimated_duration_sec": <integer 45–55>
-}}"""
-
-        import json, re
-
-        response = await model.generate_content_async(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.5,
-                max_output_tokens=400,
-            ),
-        )
-
-        # Strip code fences and parse
-        text = re.sub(r"^```(?:json)?\s*", "", response.text.strip())
-        text = re.sub(r"\s*```$", "", text)
-        data = json.loads(text)
-
-        from app.services.llm.base import ScriptResult
-        return ScriptResult(
-            script_text=data["script_text"],
-            estimated_duration_sec=int(data["estimated_duration_sec"]),
-            hook_line=data["hook_line"],
+            credit_cost=credits_for_video(duration, model_tier),
         )
 ```
 
-### Step 2: Register the Plugin
+### Step 2: Register the Handler
 
-Open `backend/app/services/formats/registry.py` and add the import and registration:
+Add it to `_REGISTRY` in `backend/app/services/formats/registry.py` (see the Genre Registry section above).
 
-```python
-from app.services.formats.news_summary import NewsSummaryPlugin   # add this line
+### Step 3: Seed the Footage Bucket
 
-_REGISTRY: dict[str, FormatPlugin] = {
-    "horror_story": HorrorStoryPlugin(),
-    "brainrot":     BrainrotPlugin(),
-    "news_summary": NewsSummaryPlugin(),                           # add this line
-}
-```
-
-### Step 3: Add a Database Row for the Format
-
-The `content_formats` table tracks which formats exist and their metadata. Add a row in the seed script or via migration:
-
-```sql
-INSERT INTO content_formats (slug, name, description, is_active, min_plan, config_schema)
-VALUES (
-  'news_summary',
-  'News Summary Shorts',
-  'Turn trending news stories into punchy 60-second Shorts.',
-  TRUE,
-  'creator',
-  '{"type":"object","properties":{"news_sources":{"type":"array","default":["reuters","apnews"]}}}'
-);
-```
-
-Alternatively, add it to `backend/app/seed.py` in the formats list.
-
-### Step 4: Add a Music Category (Optional)
-
-If your format uses a new music category, create the assets directory and add the README placeholder:
+Brainrot reads CC0 clips from `assets/footage/<bucket>/`. Seed the bucket README placeholders and drop clips in:
 
 ```bash
-mkdir -p assets/music/news_dramatic
-# Add royalty-free .mp3 files or see seed_music.sh
+bash scripts/seed_footage.sh          # buckets: satisfying, parkour_clean, hydraulic, kinetic_sand
+# add .mp4 CC0 loops, then:
+docker compose restart worker
 ```
 
-### Step 5: Test the New Format
+### Step 4: Test
 
 With the services running:
 
 ```bash
-# Queue a test video using the new format
-curl -X POST http://localhost/api/v1/videos/generate \
+curl -X POST http://localhost:8000/api/v1/videos/generate \
   -H "Authorization: Bearer <your_token>" \
   -H "Content-Type: application/json" \
   -d '{
     "channel_id": "<your_channel_uuid>",
-    "format": "news_summary",
-    "topic": "Scientists discover new species in deep ocean trench"
+    "topic": "5 facts that will melt your brain",
+    "model_tier": "Lite",
+    "duration": "30s"
   }'
 ```
 
-Check the job status in the dashboard or via `GET /api/v1/videos/{job_id}`.
+The genre is taken from the channel; check status via `GET /api/v1/videos/{job_id}`.
 
 ---
 
-## Notes for Format Authors
+## Notes for Genre Authors
 
-**Cost discipline:** The `estimate_cost()` method is called before generation begins and is shown in the dashboard. If your format uses additional paid APIs (image generation, video APIs, etc.), override `estimate_cost()` to include those costs.
+**Credits, not dollars:** Generation cost is debited in **credits** via `credits_for_video(duration, model_tier)` from `backend/app/core/pricing.py` — the single source of truth mirrored from `pricing.md`. Never hardcode credit or USD math in a handler.
 
-**Keep plugins independent:** Plugins should not import from other plugin files. Shared utilities belong in `backend/app/services/` top-level modules.
+**Gemini only:** Use `GeminiService` for both script and SEO. Do not reintroduce a second LLM. The model behind each tier is env-configured (`GEMINI_MODEL_LITE/BALANCED/MAX`).
 
-**Respect plan gating:** The `min_plan` property is checked by the API before the plugin is invoked. If your format uses expensive APIs, gate it to Creator or Agency.
+**ElevenLabs only:** Voice always comes from ElevenLabs, which also returns the word timestamps captions depend on. Do not add edge-tts/Google TTS fallbacks.
 
-**Topic fallback is required:** `prepare()` must handle `topic=None` gracefully. Either call an API to discover a trending topic, use Gemini to generate one, or fall back to a hardcoded default.
+**Visuals are genre-specific:** Horror generates images with Imagen; Brainrot pulls CC0 footage; custom genres choose one path. There is no stock-image vendor.
 
-**Pipeline steps:** Only list the steps your format actually uses. A format with no images should not list `"images"` in `get_pipeline_steps()` — this avoids unnecessary Pexels API calls.
+**Topic fallback is required:** `prepare()` must handle `topic=None` — use the channel's topic queue or a Gemini suggestion. There is no Reddit/trend source.
+
+**Pipeline steps:** Only list the steps your genre uses (e.g. `"footage"` vs `"images"`) so the pipeline skips the others.

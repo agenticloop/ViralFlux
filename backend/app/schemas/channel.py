@@ -8,37 +8,24 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 
 class ChannelCreate(BaseModel):
     channel_name: str
-    default_voice_provider: str = "edge-tts"
-    default_voice_id: str = "en-US-GuyNeural"
-    default_music_category: str = "horror_ambient"
-    default_format: str = "horror_story"
+    genre: str = "horror"
+    seed_prompt: str | None = None
+    voice_id: str | None = None
+    voice_name: str | None = None
+    default_model_tier: str = "Lite"
+    default_duration: str = "30s"
+    music_bucket: str | None = None
 
 
 class ChannelUpdate(BaseModel):
     channel_name: str | None = None
-    default_voice_provider: str | None = None
-    default_voice_id: str | None = None
-    default_music_category: str | None = None
-    default_format: str | None = None
-
-
-class ChannelOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    user_id: UUID
-    channel_name: str
-    youtube_channel_id: str | None
-    postproxy_profile_id: str | None
-    oauth_expiry: datetime | None
-    default_voice_provider: str
-    default_voice_id: str
-    default_music_category: str
-    default_format: str
-    is_active: bool
-    created_at: datetime
-    # Nested schedule if loaded
-    schedule: ScheduleOut | None = None
+    genre: str | None = None
+    seed_prompt: str | None = None
+    voice_id: str | None = None
+    voice_name: str | None = None
+    default_model_tier: str | None = None
+    default_duration: str | None = None
+    music_bucket: str | None = None
 
 
 class ScheduleConfig(BaseModel):
@@ -48,7 +35,6 @@ class ScheduleConfig(BaseModel):
     timezone: str = "America/Los_Angeles"
     require_approval: bool = True
     approval_email: EmailStr | None = None
-    auto_topic: bool = True
     topics_queue: list[str] | None = None
 
 
@@ -63,6 +49,40 @@ class ScheduleOut(BaseModel):
     timezone: str
     require_approval: bool
     approval_email: str | None
-    auto_topic: bool
+    block_ends_at: datetime | None
+    last_run_at: datetime | None
+    next_run_at: datetime | None
     topics_queue: list[str] | None
     created_at: datetime
+
+
+class ChannelOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    user_id: UUID
+    channel_name: str
+
+    # Content configuration
+    genre: str
+    seed_prompt: str | None = None
+    seed_prompt_updated_at: datetime | None = None
+    default_model_tier: str
+    default_duration: str
+    voice_id: str
+    voice_name: str | None = None
+    music_bucket: str
+
+    # YouTube connection (direct multi-account OAuth)
+    youtube_connected: bool
+    youtube_channel_id: str | None = None
+    youtube_channel_title: str | None = None
+    youtube_thumbnail_url: str | None = None
+    google_account_email: str | None = None
+    oauth_expiry: datetime | None = None
+
+    is_active: bool
+    created_at: datetime
+
+    # Nested schedule if loaded
+    schedule: ScheduleOut | None = None

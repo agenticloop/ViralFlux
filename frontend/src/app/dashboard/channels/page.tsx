@@ -27,15 +27,23 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { channelsAPI } from "@/lib/api"
-import { MUSIC_CATEGORIES, VIDEO_FORMATS } from "@/types"
-import type { Channel } from "@/types"
+import {
+  GENRES,
+  MODEL_TIERS,
+  DURATION_TIERS,
+  GENRE_VOICES,
+  type Channel,
+  type Genre,
+  type ModelTier,
+  type DurationTier,
+} from "@/types"
 
 const schema = z.object({
   channel_name: z.string().min(2, "Channel name must be at least 2 characters"),
-  default_format: z.string().min(1),
-  default_voice_provider: z.string().min(1),
-  default_voice_id: z.string().min(1),
-  default_music_category: z.string().min(1),
+  genre: z.enum(["horror", "brainrot", "custom"]),
+  default_model_tier: z.enum(["Lite", "Balanced", "Max"]),
+  default_duration: z.enum(["20s", "30s", "60s", "120s", "150s"]),
+  voice_id: z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -46,12 +54,12 @@ export default function ChannelsPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
-  const { data, isLoading } = useQuery<{ channels: Channel[] }>({
+  const { data, isLoading } = useQuery<Channel[]>({
     queryKey: ["channels"],
     queryFn: () => channelsAPI.list().then((r) => r.data),
   })
 
-  const channels = data?.channels ?? []
+  const channels = data ?? []
 
   const {
     register,
@@ -63,27 +71,37 @@ export default function ChannelsPage() {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      default_format: "horror_story",
-      default_voice_provider: "elevenlabs",
-      default_voice_id: "21m00Tcm4TlvDq8ikWAM",
-      default_music_category: "horror",
+      genre: "horror",
+      default_model_tier: "Lite",
+      default_duration: "30s",
+      voice_id: "",
     },
   })
 
-  const onSubmit = async (data: FormData) => {
+  const selectedGenre = watch("genre") as Genre
+  const voiceOptions = GENRE_VOICES[selectedGenre] ?? []
+
+  const onSubmit = async (values: FormData) => {
     setCreateError(null)
     setIsCreating(true)
     try {
-      await channelsAPI.create(data)
+      await channelsAPI.create({
+        channel_name: values.channel_name,
+        genre: values.genre,
+        default_model_tier: values.default_model_tier,
+        default_duration: values.default_duration,
+        voice_id: values.voice_id || undefined,
+      })
       queryClient.invalidateQueries({ queryKey: ["channels"] })
       reset()
       setAddOpen(false)
     } catch (err: unknown) {
-      const message =
+      const resp =
         err && typeof err === "object" && "response" in err
-          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          ? (err as { response?: { data?: { detail?: string; message?: string } } })
+              .response?.data
           : null
-      setCreateError(message ?? "Failed to create channel.")
+      setCreateError(resp?.detail ?? resp?.message ?? "Failed to create channel.")
     } finally {
       setIsCreating(false)
     }
@@ -144,7 +162,7 @@ export default function ChannelsPage() {
           <DialogHeader>
             <DialogTitle>Add New Channel</DialogTitle>
             <DialogDescription>
-              Configure a new YouTube channel for automation.
+              Configure a new channel — pick a genre, voice, and defaults.
             </DialogDescription>
           </DialogHeader>
 
@@ -163,18 +181,21 @@ export default function ChannelsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Default Format</Label>
+              <Label>Genre</Label>
               <Select
-                value={watch("default_format")}
-                onValueChange={(v) => setValue("default_format", v)}
+                value={watch("genre")}
+                onValueChange={(v) => {
+                  setValue("genre", v as Genre)
+                  setValue("voice_id", "")
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {VIDEO_FORMATS.filter((f) => f.is_active).map((f) => (
-                    <SelectItem key={f.slug} value={f.slug}>
-                      {f.name}
+                  {GENRES.map((g) => (
+                    <SelectItem key={g.value} value={g.value}>
+                      {g.emoji} {g.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -183,42 +204,63 @@ export default function ChannelsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Voice Provider</Label>
+                <Label>Model Tier</Label>
                 <Select
-                  value={watch("default_voice_provider")}
-                  onValueChange={(v) => setValue("default_voice_provider", v)}
+                  value={watch("default_model_tier")}
+                  onValueChange={(v) =>
+                    setValue("default_model_tier", v as ModelTier)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
-                    <SelectItem value="openai">OpenAI</SelectItem>
+                    {MODEL_TIERS.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Voice ID</Label>
-                <Input
-                  placeholder="Rachel"
-                  {...register("default_voice_id")}
-                />
+                <Label>Duration</Label>
+                <Select
+                  value={watch("default_duration")}
+                  onValueChange={(v) =>
+                    setValue("default_duration", v as DurationTier)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DURATION_TIERS.map((d) => (
+                      <SelectItem key={d.value} value={d.value}>
+                        {d.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Background Music</Label>
+              <Label>
+                Voice{" "}
+                <span className="text-muted-foreground text-xs">(optional)</span>
+              </Label>
               <Select
-                value={watch("default_music_category")}
-                onValueChange={(v) => setValue("default_music_category", v)}
+                value={watch("voice_id") || ""}
+                onValueChange={(v) => setValue("voice_id", v)}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Pick a recommended voice..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {MUSIC_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat} className="capitalize">
-                      {cat}
+                  {voiceOptions.map((v) => (
+                    <SelectItem key={v.voice_id} value={v.voice_id}>
+                      {v.name} — {v.desc}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -227,7 +269,9 @@ export default function ChannelsPage() {
 
             {createError && (
               <div className="bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800/40 rounded-lg px-4 py-3">
-                <p className="text-red-600 dark:text-red-400 text-sm">{createError}</p>
+                <p className="text-red-600 dark:text-red-400 text-sm">
+                  {createError}
+                </p>
               </div>
             )}
 

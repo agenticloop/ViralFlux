@@ -11,17 +11,23 @@ from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import genres as genres_mod
+from app.core import pricing
 from app.core.config import settings
 from app.core.dependencies import get_current_verified_user, get_db
 from app.models.channel import YoutubeChannel
-from app.models.video_job import VideoJob
+from app.models.plan import Plan
+from app.models.video_job import SCRIPT_SOURCES, VideoJob
 from app.schemas.video import (
     VideoApproveRequest,
+    VideoBulkGenerateItem,
     VideoBulkGenerateRequest,
     VideoGenerateRequest,
+    VideoGenerateResponse,
     VideoJobOut,
     VideoListResponse,
 )
+from app.services import credit_service
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +44,191 @@ async def _get_job_or_404(job_id: UUID, user_id: UUID, db: AsyncSession) -> Vide
     return job
 
 
+async def _load_plan(user, db: AsyncSession) -> Plan:
+    if not user.plan_id:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="No active plan. Please subscribe to a plan first.",
+        )
+    res = await db.execute(select(Plan).where(Plan.id == user.plan_id))
+    plan = res.scalar_one_or_none()
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="No active plan found."
+        )
+    return plan
+
+
+async def _load_channel(channel_id: UUID, user_id: UUID, db: AsyncSession) -> YoutubeChannel:
+    res = await db.execute(
+        select(YoutubeChannel).where(
+            YoutubeChannel.id == channel_id,
+            YoutubeChannel.user_id == user_id,
+            YoutubeChannel.is_active == True,  # noqa: E712
+        )
+    )
+    channel = res.scalar_one_or_none()
+    if not channel:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found.")
+    return channel
+
+
+def _topup_url() -> str:
+    return f"{settings.FRONTEND_URL.rstrip('/')}/billing/topup"
+
+
+def _enqueue_generate(job_id: UUID) -> None:
+    try:
+        from app.workers.tasks.video_tasks import generate_video as generate_video_task
+
+        generate_video_task.delay(str(job_id))
+    except Exception as exc:  # pragma: no cover - queue best-effort
+        logger.error("Failed to enqueue generate_video for job %s: %s", job_id, exc)
+
+
+def _enqueue_upload(job_id: UUID) -> None:
+    try:
+        from app.workers.tasks.video_tasks import upload_to_youtube
+
+        upload_to_youtube.delay(str(job_id))
+    except Exception as exc:  # pragma: no cover - queue best-effort
+        logger.error("Failed to enqueue upload_to_youtube for job %s: %s", job_id, exc)
+
+
+def _validate_generation_inputs(plan: Plan, genre: str, duration: str, model: str) -> None:
+    """Validate genre/duration/model are allowed for the plan. Raises 403/400/402."""
+    if genre not in genres_mod.GENRE_SLUGS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown genre '{genre}'."
+        )
+    allowed_genres = pricing.PLAN_GENRES.get(plan.name, [])
+    if genre not in allowed_genres:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Genre '{genre}' is not available on the '{plan.name}' plan.",
+        )
+
+    if duration not in pricing.DURATION_TIERS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown duration tier '{duration}'.",
+        )
+    allowed_durations = pricing.PLAN_DURATIONS.get(plan.name, [])
+    if duration not in allowed_durations:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Duration '{duration}' is not available on the '{plan.name}' plan "
+            f"(max {pricing.PLAN_MAX_DURATION.get(plan.name)}).",
+        )
+
+    if model not in pricing.MODEL_TIERS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown model tier '{model}'."
+        )
+    allowed_models = pricing.PLAN_MODELS.get(plan.name, [])
+    if model not in allowed_models:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Model '{model}' is not available on the '{plan.name}' plan.",
+        )
+
+
+def _validate_manual_script(plan: Plan, script_source: str, script: str | None) -> None:
+    if script_source not in SCRIPT_SOURCES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown script_source '{script_source}'.",
+        )
+    if script_source == "manual":
+        if not script or not script.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A script is required when script_source is 'manual'.",
+            )
+        limit = pricing.PLAN_SCRIPT_CHAR_LIMIT.get(plan.name, 0)
+        if len(script) > limit:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Script exceeds your plan limit of {limit} characters "
+                f"(got {len(script)}).",
+            )
+
+
+async def _create_and_reserve_job(
+    *,
+    db: AsyncSession,
+    user,
+    plan: Plan,
+    channel: YoutubeChannel,
+    genre: str,
+    duration: str,
+    model_requested: str,
+    script_source: str,
+    script: str | None,
+    topic: str | None,
+    voice_id: str | None,
+    scheduled_for: datetime | None = None,
+) -> tuple[VideoJob, int, bool]:
+    """Validate, resolve model tier, check affordability, create job, reserve credits.
+
+    Returns (job, credits_charged, fell_back_to_balanced). Raises HTTPException on failure.
+    Does not commit — caller is responsible (get_db commits on success).
+    """
+    _validate_generation_inputs(plan, genre, duration, model_requested)
+    _validate_manual_script(plan, script_source, script)
+
+    effective_model, fell_back = await credit_service.resolve_model_tier(
+        db, user, plan, model_requested
+    )
+
+    credits = pricing.credits_for_video(duration, effective_model)
+    if not credit_service.can_afford(user, credits):
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail={
+                "message": "Insufficient credits.",
+                "needed": credits,
+                "balance": credit_service.balance(user),
+                "topup_url": _topup_url(),
+            },
+        )
+
+    genre_def = genres_mod.get_genre(genre)
+    resolved_voice = voice_id or genre_def["default_voice_id"]
+
+    job = VideoJob(
+        user_id=user.id,
+        channel_id=channel.id,
+        genre=genre,
+        duration_tier=duration,
+        model_tier=effective_model,
+        script_source=script_source,
+        topic=topic,
+        script=script if script_source == "manual" else None,
+        voice_id=resolved_voice,
+        voice_settings=genre_def["voice_settings"],
+        credits_cost=credits,
+        scheduled_for=scheduled_for,
+        approval_token=secrets.token_urlsafe(32),
+        status="queued",
+    )
+    db.add(job)
+    await db.flush()
+
+    await credit_service.reserve_for_video(
+        db, user, duration=duration, model=effective_model, job_id=job.id
+    )
+    await db.refresh(job)
+    return job, credits, fell_back
+
+
 @router.get("/", response_model=VideoListResponse)
 async def list_videos(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     status_filter: str | None = Query(default=None, alias="status"),
     channel_id: UUID | None = Query(default=None),
+    genre: str | None = Query(default=None),
     current_user=Depends(get_current_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -52,6 +237,8 @@ async def list_videos(
         stmt = stmt.where(VideoJob.status == status_filter)
     if channel_id:
         stmt = stmt.where(VideoJob.channel_id == channel_id)
+    if genre:
+        stmt = stmt.where(VideoJob.genre == genre)
 
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total_result = await db.execute(count_stmt)
@@ -70,71 +257,94 @@ async def list_videos(
     )
 
 
-@router.post("/generate", response_model=VideoJobOut, status_code=status.HTTP_202_ACCEPTED)
+@router.post("/generate", response_model=VideoGenerateResponse, status_code=status.HTTP_202_ACCEPTED)
 async def generate_video(
     payload: VideoGenerateRequest,
     current_user=Depends(get_current_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Verify channel ownership
-    ch_result = await db.execute(
-        select(YoutubeChannel).where(
-            YoutubeChannel.id == payload.channel_id,
-            YoutubeChannel.user_id == current_user.id,
-            YoutubeChannel.is_active == True,  # noqa: E712
-        )
-    )
-    channel = ch_result.scalar_one_or_none()
-    if not channel:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found.")
+    plan = await _load_plan(current_user, db)
+    channel = await _load_channel(payload.channel_id, current_user.id, db)
+    await credit_service.ensure_period(db, current_user, plan)
 
-    # Check monthly usage against plan
-    from app.models.plan import Plan
-    from calendar import monthrange
+    genre = payload.genre or channel.genre
+    topic = payload.topic or payload.seed
 
-    now = datetime.now(timezone.utc)
-    first_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    if current_user.plan_id:
-        plan_res = await db.execute(select(Plan).where(Plan.id == current_user.plan_id))
-        plan = plan_res.scalar_one_or_none()
-        if plan and plan.shorts_per_month is not None:
-            used_res = await db.execute(
-                select(func.count()).select_from(VideoJob).where(
-                    VideoJob.user_id == current_user.id,
-                    VideoJob.created_at >= first_of_month,
-                )
-            )
-            used = used_res.scalar_one()
-            if used >= plan.shorts_per_month:
-                raise HTTPException(
-                    status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                    detail=f"Monthly limit of {plan.shorts_per_month} shorts reached. Upgrade your plan.",
-                )
-
-    job = VideoJob(
-        user_id=current_user.id,
-        channel_id=payload.channel_id,
-        format_slug=payload.format or channel.default_format,
-        topic=payload.topic,
-        voice_provider=payload.voice_provider or channel.default_voice_provider,
-        voice_id=payload.voice_id or channel.default_voice_id,
+    job, credits_charged, fell_back = await _create_and_reserve_job(
+        db=db,
+        user=current_user,
+        plan=plan,
+        channel=channel,
+        genre=genre,
+        duration=payload.duration_tier,
+        model_requested=payload.model_tier,
+        script_source=payload.script_source,
+        script=payload.script,
+        topic=topic,
+        voice_id=payload.voice_id,
         scheduled_for=payload.schedule_for,
-        approval_token=secrets.token_urlsafe(32),
-        status="queued",
     )
-    db.add(job)
-    await db.flush()
-    await db.refresh(job)
 
-    # Queue Celery task
-    try:
-        from app.workers.celery_app import celery_app
+    _enqueue_generate(job.id)
 
-        celery_app.send_task("app.workers.tasks.video_tasks.generate_video", args=[str(job.id)])
-    except Exception as exc:
-        logger.error("Failed to queue Celery task for job %s: %s", job.id, exc)
+    return VideoGenerateResponse(
+        job=VideoJobOut.model_validate(job),
+        credits_charged=credits_charged,
+        fell_back_to_balanced=fell_back,
+    )
 
-    return VideoJobOut.model_validate(job)
+
+@router.post(
+    "/bulk-generate",
+    response_model=list[VideoGenerateResponse],
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def bulk_generate(
+    payload: VideoBulkGenerateRequest,
+    current_user=Depends(get_current_verified_user),
+    db: AsyncSession = Depends(get_db),
+):
+    plan = await _load_plan(current_user, db)
+    channel = await _load_channel(payload.channel_id, current_user.id, db)
+    await credit_service.ensure_period(db, current_user, plan)
+
+    items: list[VideoBulkGenerateItem] = payload.items[:10]  # cap at 10 per request
+    if not items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="No items to generate."
+        )
+
+    responses: list[VideoGenerateResponse] = []
+    created_jobs: list[UUID] = []
+    for item in items:
+        genre = item.genre or channel.genre
+        topic = item.topic or item.seed
+        job, credits_charged, fell_back = await _create_and_reserve_job(
+            db=db,
+            user=current_user,
+            plan=plan,
+            channel=channel,
+            genre=genre,
+            duration=item.duration_tier,
+            model_requested=item.model_tier,
+            script_source=item.script_source,
+            script=item.script,
+            topic=topic,
+            voice_id=item.voice_id,
+        )
+        created_jobs.append(job.id)
+        responses.append(
+            VideoGenerateResponse(
+                job=VideoJobOut.model_validate(job),
+                credits_charged=credits_charged,
+                fell_back_to_balanced=fell_back,
+            )
+        )
+
+    for job_id in created_jobs:
+        _enqueue_generate(job_id)
+
+    return responses
 
 
 @router.get("/{job_id}", response_model=VideoJobOut)
@@ -187,13 +397,7 @@ async def approve_video(
     job.approved_at = datetime.now(timezone.utc)
     await db.flush()
 
-    # Queue upload task
-    try:
-        from app.workers.celery_app import celery_app
-
-        celery_app.send_task("app.workers.tasks.video_tasks.upload_to_youtube", args=[str(job.id)])
-    except Exception as exc:
-        logger.error("Failed to queue upload task for job %s: %s", job.id, exc)
+    _enqueue_upload(job.id)
 
     await db.refresh(job)
     return VideoJobOut.model_validate(job)
@@ -215,6 +419,11 @@ async def reject_video(
 
     job.status = "rejected"
     job.error_message = payload.note
+    # Refund the reserved credits since the video will not be posted.
+    if job.credits_cost:
+        await credit_service.refund_video(
+            db, current_user, credits=job.credits_cost, model=job.model_tier, job_id=job.id
+        )
     await db.flush()
     await db.refresh(job)
     return VideoJobOut.model_validate(job)
@@ -228,7 +437,6 @@ async def delete_video(
 ):
     job = await _get_job_or_404(job_id, current_user.id, db)
 
-    # Remove file if it exists
     if job.video_path and os.path.exists(job.video_path):
         try:
             os.remove(job.video_path)
@@ -239,67 +447,13 @@ async def delete_video(
     await db.flush()
 
 
-@router.post("/bulk-generate", response_model=list[VideoJobOut], status_code=status.HTTP_202_ACCEPTED)
-async def bulk_generate(
-    payload: VideoBulkGenerateRequest,
-    current_user=Depends(get_current_verified_user),
-    db: AsyncSession = Depends(get_db),
-):
-    ch_result = await db.execute(
-        select(YoutubeChannel).where(
-            YoutubeChannel.id == payload.channel_id,
-            YoutubeChannel.user_id == current_user.id,
-            YoutubeChannel.is_active == True,  # noqa: E712
-        )
-    )
-    channel = ch_result.scalar_one_or_none()
-    if not channel:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found.")
-
-    jobs = []
-    for i in range(min(payload.count, 10)):  # Cap at 10 per request
-        topic = (
-            payload.topic_list[i]
-            if payload.topic_list and i < len(payload.topic_list)
-            else None
-        )
-        job = VideoJob(
-            user_id=current_user.id,
-            channel_id=payload.channel_id,
-            format_slug=payload.format or channel.default_format,
-            topic=topic,
-            voice_provider=channel.default_voice_provider,
-            voice_id=channel.default_voice_id,
-            approval_token=secrets.token_urlsafe(32),
-            status="queued",
-        )
-        db.add(job)
-        jobs.append(job)
-
-    await db.flush()
-    for job in jobs:
-        await db.refresh(job)
-
-    try:
-        from app.workers.celery_app import celery_app
-
-        for job in jobs:
-            celery_app.send_task("app.workers.tasks.video_tasks.generate_video", args=[str(job.id)])
-    except Exception as exc:
-        logger.error("Failed to queue bulk tasks: %s", exc)
-
-    return [VideoJobOut.model_validate(j) for j in jobs]
-
-
 @router.get("/approve/{token}", response_model=VideoJobOut)
 async def email_approve(
     token: str,
     db: AsyncSession = Depends(get_db),
 ):
     """Email approval link — no auth required. Validates approval_token."""
-    result = await db.execute(
-        select(VideoJob).where(VideoJob.approval_token == token)
-    )
+    result = await db.execute(select(VideoJob).where(VideoJob.approval_token == token))
     job = result.scalar_one_or_none()
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid approval token.")
@@ -314,12 +468,7 @@ async def email_approve(
     job.approved_at = datetime.now(timezone.utc)
     await db.flush()
 
-    try:
-        from app.workers.celery_app import celery_app
-
-        celery_app.send_task("app.workers.tasks.video_tasks.upload_to_youtube", args=[str(job.id)])
-    except Exception as exc:
-        logger.error("Failed to queue upload task: %s", exc)
+    _enqueue_upload(job.id)
 
     await db.refresh(job)
     return VideoJobOut.model_validate(job)

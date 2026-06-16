@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation"
 import { Bell, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/shared/ThemeToggle"
+import ChannelSwitcher from "@/components/dashboard/ChannelSwitcher"
 import { useUIStore } from "@/store/uiStore"
 import { useAuthStore } from "@/store/authStore"
 import { getInitials } from "@/lib/utils"
@@ -14,6 +15,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard/videos": "Videos",
   "/dashboard/videos/new": "New Video",
   "/dashboard/analytics": "Analytics",
+  "/dashboard/billing": "Billing & Credits",
   "/dashboard/settings": "Settings",
 }
 
@@ -33,11 +35,12 @@ export default function Topbar() {
 
   return (
     <header className="h-16 bg-background border-b border-border flex items-center justify-between px-6 flex-shrink-0">
-      {/* Page Title */}
-      <div>
-        <h1 className="text-foreground font-bold text-lg">
+      {/* Page Title + Channel Switcher */}
+      <div className="flex items-center gap-4 min-w-0">
+        <h1 className="text-foreground font-bold text-lg hidden md:block">
           {getPageTitle(pathname)}
         </h1>
+        <ChannelSwitcher />
       </div>
 
       {/* Right side */}

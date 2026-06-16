@@ -52,6 +52,12 @@ const statusConfig: Record<
     dot: "bg-red-500 dark:bg-red-400",
     pulse: false,
   },
+  rejected: {
+    label: "Rejected",
+    color: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700",
+    dot: "bg-zinc-400 dark:bg-zinc-400",
+    pulse: false,
+  },
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {

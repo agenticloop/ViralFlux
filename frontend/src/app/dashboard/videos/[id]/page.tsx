@@ -1,17 +1,18 @@
 "use client"
 
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ArrowLeft,
   Check,
   X,
   ExternalLink,
-  DollarSign,
+  Sparkles,
   Clock,
   Youtube,
   FileText,
   Tag,
+  Film,
   Loader2,
 } from "lucide-react"
 import Link from "next/link"
@@ -20,13 +21,13 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner"
 import VideoPlayer from "@/components/dashboard/VideoPlayer"
 import { videosAPI } from "@/lib/api"
-import { formatCost, timeAgo, formatDate } from "@/lib/utils"
+import { timeAgo, formatDate } from "@/lib/utils"
+import { genreLabel } from "@/types"
 import type { VideoJob } from "@/types"
 import { useState } from "react"
 
 export default function VideoDetailPage() {
   const params = useParams()
-  const router = useRouter()
   const queryClient = useQueryClient()
   const videoId = params.id as string
   const [isApproving, setIsApproving] = useState(false)
@@ -37,7 +38,11 @@ export default function VideoDetailPage() {
     queryFn: () => videosAPI.get(videoId).then((r) => r.data),
     refetchInterval: (query) => {
       const status = (query.state.data as VideoJob | undefined)?.status
-      return status === "generating" || status === "uploading" ? 5000 : false
+      return status === "generating" ||
+        status === "uploading" ||
+        status === "queued"
+        ? 5000
+        : false
     },
   })
 
@@ -46,6 +51,7 @@ export default function VideoDetailPage() {
     try {
       await videosAPI.approve(videoId)
       queryClient.invalidateQueries({ queryKey: ["video", videoId] })
+      queryClient.invalidateQueries({ queryKey: ["videos"] })
     } finally {
       setIsApproving(false)
     }
@@ -56,6 +62,7 @@ export default function VideoDetailPage() {
     try {
       await videosAPI.reject(videoId)
       queryClient.invalidateQueries({ queryKey: ["video", videoId] })
+      queryClient.invalidateQueries({ queryKey: ["videos"] })
     } finally {
       setIsRejecting(false)
     }
@@ -93,7 +100,7 @@ export default function VideoDetailPage() {
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             {video.video_path ? (
               <VideoPlayer
-                src={video.video_path}
+                src={videosAPI.previewUrl(video.id)}
                 className="w-full aspect-[9/16]"
               />
             ) : (
@@ -108,7 +115,8 @@ export default function VideoDetailPage() {
                     ? "Generation failed"
                     : "Video not available"}
                 </p>
-                {video.status === "generating" && (
+                {(video.status === "generating" ||
+                  video.status === "uploading") && (
                   <Loader2 className="w-6 h-6 text-[#E5192A] animate-spin mt-3" />
                 )}
               </div>
@@ -169,10 +177,23 @@ export default function VideoDetailPage() {
         <div className="lg:col-span-2 space-y-4">
           {/* Status + Meta */}
           <div className="bg-card border border-border rounded-xl p-5">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-2 flex-wrap mb-4">
               <StatusBadge status={video.status} />
-              <span className="text-muted-foreground text-xs capitalize">
-                {video.format_slug?.replace("_", " ")}
+              <span className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-md">
+                {genreLabel(video.genre)}
+              </span>
+              <span className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-md">
+                {video.model_tier}
+              </span>
+              <span className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-md">
+                {video.duration_tier}
+              </span>
+              <span className="text-[11px] bg-muted text-muted-foreground px-2 py-0.5 rounded-md capitalize">
+                {video.script_source === "ai"
+                  ? "AI · idea"
+                  : video.script_source === "seed"
+                  ? "AI · seed"
+                  : "Manual"}
               </span>
             </div>
 
@@ -181,16 +202,22 @@ export default function VideoDetailPage() {
             </h1>
 
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-3">
-              {video.cost_usd !== null && (
+              {video.credits_cost !== null && (
                 <span className="flex items-center gap-1.5">
-                  <DollarSign className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
-                  {formatCost(video.cost_usd)} cost
+                  <Sparkles className="w-3.5 h-3.5 text-[#E5192A]" />
+                  {video.credits_cost} credits
                 </span>
               )}
               <span className="flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" />
                 Created {timeAgo(video.created_at)}
               </span>
+              {video.scheduled_for && (
+                <span className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5" />
+                  Scheduled {formatDate(video.scheduled_for)}
+                </span>
+              )}
               {video.posted_at && (
                 <span className="flex items-center gap-1.5">
                   <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
@@ -251,6 +278,40 @@ export default function VideoDetailPage() {
                   {video.script}
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Scene plan */}
+          {video.scene_plan && video.scene_plan.length > 0 && (
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h3 className="text-foreground font-semibold mb-4 flex items-center gap-2">
+                <Film className="w-4 h-4 text-[#E5192A]" />
+                Scene Plan
+              </h3>
+              <ol className="space-y-3">
+                {video.scene_plan.map((scene, i) => (
+                  <li
+                    key={i}
+                    className="bg-background rounded-lg p-3 border border-border"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[#E5192A] text-xs font-bold">
+                        Scene {scene.index ?? i + 1}
+                      </span>
+                    </div>
+                    {scene.text && (
+                      <p className="text-muted-foreground/80 text-sm leading-relaxed">
+                        {scene.text}
+                      </p>
+                    )}
+                    {scene.image_prompt && (
+                      <p className="text-muted-foreground text-xs mt-1 italic">
+                        {scene.image_prompt}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ol>
             </div>
           )}
 

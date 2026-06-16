@@ -5,23 +5,16 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useQuery } from "@tanstack/react-query"
-import { Loader2, Copy, Check, Key, User, CreditCard, Mic } from "lucide-react"
+import { Loader2, User, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { useAuthStore } from "@/store/authStore"
-import { plansAPI, authAPI } from "@/lib/api"
-import { VOICE_IDS, type VoiceProvider } from "@/types"
-import type { UserSubscription } from "@/types"
+import { plansAPI } from "@/lib/api"
+import { formatCredits } from "@/lib/utils"
+import type { CurrentPlan } from "@/types"
 
 const profileSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters"),
@@ -42,27 +35,6 @@ const passwordSchema = z
 type ProfileData = z.infer<typeof profileSchema>
 type PasswordData = z.infer<typeof passwordSchema>
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false)
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-  return (
-    <button
-      onClick={handleCopy}
-      className="text-muted-foreground hover:text-foreground transition-colors p-1"
-    >
-      {copied ? (
-        <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-      ) : (
-        <Copy className="w-4 h-4" />
-      )}
-    </button>
-  )
-}
-
 export default function SettingsPage() {
   const { user, setUser } = useAuthStore()
   const [profileLoading, setProfileLoading] = useState(false)
@@ -71,10 +43,9 @@ export default function SettingsPage() {
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
-  const [defaultVoiceProvider, setDefaultVoiceProvider] = useState<VoiceProvider>("elevenlabs")
 
-  const { data: subscription } = useQuery<UserSubscription>({
-    queryKey: ["subscription"],
+  const { data: current } = useQuery<CurrentPlan>({
+    queryKey: ["current-plan"],
     queryFn: () => plansAPI.current().then((r) => r.data),
   })
 
@@ -94,7 +65,6 @@ export default function SettingsPage() {
     setProfileError(null)
     setProfileLoading(true)
     try {
-      // In a real app, this would call a PATCH /auth/me endpoint
       setUser({ ...user!, full_name: data.full_name, email: data.email })
       setProfileSuccess(true)
       setTimeout(() => setProfileSuccess(false), 3000)
@@ -109,7 +79,6 @@ export default function SettingsPage() {
     setPasswordError(null)
     setPasswordLoading(true)
     try {
-      // Would call PATCH /auth/change-password
       setPasswordSuccess(true)
       passwordForm.reset()
       setTimeout(() => setPasswordSuccess(false), 3000)
@@ -120,14 +89,14 @@ export default function SettingsPage() {
     }
   }
 
-  const usagePercent = subscription
-    ? subscription.plan.shorts_per_month
-      ? Math.min(
-          100,
-          (subscription.videos_used / subscription.plan.shorts_per_month) * 100
-        )
-      : 0
+  const usage = current?.usage
+  const creditsUsed = usage
+    ? Math.max(0, usage.credits_per_month - usage.subscription_credits)
     : 0
+  const creditsPercent =
+    usage && usage.credits_per_month > 0
+      ? Math.min(100, (creditsUsed / usage.credits_per_month) * 100)
+      : 0
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -138,7 +107,10 @@ export default function SettingsPage() {
           <h2 className="text-foreground font-bold text-lg">Profile</h2>
         </div>
 
-        <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+        <form
+          onSubmit={profileForm.handleSubmit(onProfileSubmit)}
+          className="space-y-4"
+        >
           <div className="space-y-1.5">
             <Label>Full Name</Label>
             <Input {...profileForm.register("full_name")} />
@@ -154,16 +126,25 @@ export default function SettingsPage() {
           </div>
 
           {profileError && (
-            <p className="text-red-600 dark:text-red-400 text-sm">{profileError}</p>
+            <p className="text-red-600 dark:text-red-400 text-sm">
+              {profileError}
+            </p>
           )}
           {profileSuccess && (
-            <p className="text-green-600 dark:text-green-400 text-sm">Profile updated!</p>
+            <p className="text-green-600 dark:text-green-400 text-sm">
+              Profile updated!
+            </p>
           )}
 
           <Button type="submit" variant="red" size="sm" disabled={profileLoading}>
             {profileLoading ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
-            ) : "Save Changes"}
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </form>
 
@@ -171,10 +152,16 @@ export default function SettingsPage() {
 
         {/* Change Password */}
         <h3 className="text-foreground font-semibold mb-4">Change Password</h3>
-        <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+        <form
+          onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
+          className="space-y-4"
+        >
           <div className="space-y-1.5">
             <Label>Current Password</Label>
-            <Input type="password" {...passwordForm.register("current_password")} />
+            <Input
+              type="password"
+              {...passwordForm.register("current_password")}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -188,7 +175,10 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Confirm Password</Label>
-              <Input type="password" {...passwordForm.register("confirm_password")} />
+              <Input
+                type="password"
+                {...passwordForm.register("confirm_password")}
+              />
               {passwordForm.formState.errors.confirm_password && (
                 <p className="text-[#E5192A] text-xs">
                   {passwordForm.formState.errors.confirm_password.message}
@@ -198,136 +188,144 @@ export default function SettingsPage() {
           </div>
 
           {passwordError && (
-            <p className="text-red-600 dark:text-red-400 text-sm">{passwordError}</p>
+            <p className="text-red-600 dark:text-red-400 text-sm">
+              {passwordError}
+            </p>
           )}
           {passwordSuccess && (
-            <p className="text-green-600 dark:text-green-400 text-sm">Password changed!</p>
+            <p className="text-green-600 dark:text-green-400 text-sm">
+              Password changed!
+            </p>
           )}
 
-          <Button type="submit" variant="outline" size="sm"
+          <Button
+            type="submit"
+            variant="outline"
+            size="sm"
             className="border-border text-foreground hover:border-[#E5192A]"
-            disabled={passwordLoading}>
+            disabled={passwordLoading}
+          >
             {passwordLoading ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Changing...</>
-            ) : "Change Password"}
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Changing...
+              </>
+            ) : (
+              "Change Password"
+            )}
           </Button>
         </form>
       </div>
 
-      {/* Plan Section */}
+      {/* Plan & Credits Section */}
       <div className="bg-card border border-border rounded-xl p-6">
         <div className="flex items-center gap-2 mb-5">
           <CreditCard className="w-5 h-5 text-[#E5192A]" />
-          <h2 className="text-foreground font-bold text-lg">Plan & Usage</h2>
+          <h2 className="text-foreground font-bold text-lg">Plan & Credits</h2>
         </div>
 
-        {subscription ? (
-          <div className="space-y-4">
+        {current ? (
+          <div className="space-y-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-foreground font-semibold">
-                  {subscription.plan.name} Plan
+                <p className="text-foreground font-semibold capitalize">
+                  {current.plan.name} Plan
                 </p>
                 <p className="text-muted-foreground text-sm">
-                  ${subscription.plan.price_usd}/month
+                  ${current.plan.price_usd}/month
                 </p>
               </div>
-              <Button variant="red" size="sm" asChild>
-                <a href="/pricing">Upgrade</a>
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-border text-foreground hover:border-[#E5192A]"
+                  asChild
+                >
+                  <a href="/dashboard/billing">Manage billing</a>
+                </Button>
+                <Button variant="red" size="sm" asChild>
+                  <a href="/pricing">Upgrade</a>
+                </Button>
+              </div>
             </div>
+
+            {/* Credits */}
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-muted-foreground">Videos used</span>
+                <span className="text-muted-foreground">
+                  Subscription credits used
+                </span>
                 <span className="text-foreground">
-                  {subscription.videos_used} / {subscription.plan.shorts_per_month ?? "∞"}
+                  {formatCredits(creditsUsed)} /{" "}
+                  {formatCredits(usage?.credits_per_month ?? 0)}
                 </span>
               </div>
-              <Progress value={usagePercent} className="h-2" />
+              <Progress value={creditsPercent} className="h-2" />
+              <p className="text-muted-foreground text-xs mt-2">
+                Balance: {formatCredits(usage?.credits_balance ?? 0)} credits
+                {(usage?.topup_credits ?? 0) > 0 && (
+                  <> · {formatCredits(usage?.topup_credits ?? 0)} top-up</>
+                )}
+              </p>
+            </div>
+
+            {/* Max quota */}
+            {(usage?.max_quota ?? 0) > 0 && (
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">
+                    Max-model generations
+                  </span>
+                  <span className="text-foreground">
+                    {usage?.max_quota_used ?? 0} / {usage?.max_quota ?? 0}
+                  </span>
+                </div>
+                <Progress
+                  value={
+                    usage && usage.max_quota > 0
+                      ? Math.min(
+                          100,
+                          (usage.max_quota_used / usage.max_quota) * 100
+                        )
+                      : 0
+                  }
+                  className="h-2"
+                />
+              </div>
+            )}
+
+            {/* Channels */}
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-muted-foreground">Channels</span>
+                <span className="text-foreground">
+                  {usage?.channels_used ?? 0} / {usage?.channels_limit ?? 0}
+                </span>
+              </div>
+              <Progress
+                value={
+                  usage && usage.channels_limit > 0
+                    ? Math.min(
+                        100,
+                        (usage.channels_used / usage.channels_limit) * 100
+                      )
+                    : 0
+                }
+                className="h-2"
+              />
             </div>
           </div>
         ) : (
           <div className="text-center py-6">
             <p className="text-muted-foreground text-sm mb-4">
-              You&apos;re on the free trial (3 videos).
+              Loading your plan...
             </p>
             <Button variant="red" size="sm" asChild>
-              <a href="/pricing">Upgrade to Starter</a>
+              <a href="/pricing">View plans</a>
             </Button>
           </div>
         )}
-      </div>
-
-      {/* API Keys Section */}
-      <div className="bg-card border border-border rounded-xl p-6">
-        <div className="flex items-center gap-2 mb-5">
-          <Key className="w-5 h-5 text-[#E5192A]" />
-          <h2 className="text-foreground font-bold text-lg">API Keys</h2>
-        </div>
-        <p className="text-muted-foreground text-sm mb-4">
-          Your configured API keys for AI providers. Keys are stored encrypted.
-        </p>
-        <div className="space-y-3">
-          {[
-            { label: "ElevenLabs API Key", key: "el_****************************1a2b" },
-            { label: "OpenAI API Key", key: "sk-****************************3c4d" },
-            { label: "Google Gemini Key", key: "AI****************************5e6f" },
-          ].map(({ label, key }) => (
-            <div key={label} className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border">
-              <div className="flex-1">
-                <p className="text-muted-foreground text-xs mb-0.5">{label}</p>
-                <p className="text-foreground font-mono text-sm">{key}</p>
-              </div>
-              <CopyButton text={key} />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Voice Defaults */}
-      <div className="bg-card border border-border rounded-xl p-6">
-        <div className="flex items-center gap-2 mb-5">
-          <Mic className="w-5 h-5 text-[#E5192A]" />
-          <h2 className="text-foreground font-bold text-lg">Voice Defaults</h2>
-        </div>
-        <p className="text-muted-foreground text-sm mb-4">
-          Set your default voice settings for new channels.
-        </p>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label>Default Provider</Label>
-            <Select
-              value={defaultVoiceProvider}
-              onValueChange={(v) => setDefaultVoiceProvider(v as VoiceProvider)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
-                <SelectItem value="openai">OpenAI</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Default Voice</Label>
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="Select voice..." />
-              </SelectTrigger>
-              <SelectContent>
-                {VOICE_IDS[defaultVoiceProvider].map((v) => (
-                  <SelectItem key={v.id} value={v.id}>
-                    {v.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <Button variant="red" size="sm" className="mt-4">
-          Save Voice Defaults
-        </Button>
       </div>
     </div>
   )

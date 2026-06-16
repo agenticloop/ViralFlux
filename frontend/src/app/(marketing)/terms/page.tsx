@@ -55,7 +55,7 @@ You retain ownership of the content generated for your channels. By using the Se
   },
   {
     title: "Intellectual Property",
-    content: `The ViralFlux platform, including its software, design, and branding, is owned by us and protected by intellectual property laws. You may not copy, modify, distribute, or reverse-engineer any part of the Service. AI-generated content created through the Service is owned by you, subject to the terms of the underlying AI providers (Google Gemini, OpenAI).`,
+    content: `The ViralFlux platform, including its software, design, and branding, is owned by us and protected by intellectual property laws. You may not copy, modify, distribute, or reverse-engineer any part of the Service. AI-generated content created through the Service is owned by you, subject to the terms of the underlying AI providers (Google Gemini, ElevenLabs).`,
   },
   {
     title: "Limitation of Liability",

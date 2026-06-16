@@ -17,24 +17,22 @@ from app.models.channel import YoutubeChannel, ChannelSchedule
 logger = logging.getLogger(__name__)
 
 
+class _AlreadyHandled(Exception):
+    """Internal: signals the failure was already persisted and refunded."""
+
+
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=60)
 def generate_video(self, job_id: str):
-    """
-    Main video generation task.
+    """Generate a video end-to-end: format prep → render → approval routing.
 
-    Steps:
-    1. Load job from DB, set status=generating
-    2. Load channel config
-    3. Run format plugin to get FormatOutput
-    4. Run VideoPipeline.run()
-    5. Set job.video_path, status=pending_approval
-    6. If channel schedule requires_approval: send approval email
-    7. Else: auto-trigger upload_video task
-
-    On error: set status=failed, error_message, retry up to 3x.
+    On any failure the reserved credits are refunded exactly once and the job
+    is marked failed; the task is NOT retried after a refund.
     """
     try:
         asyncio.run(_generate_video_async(job_id))
+    except _AlreadyHandled:
+        # Failure was persisted + refunded inside the coroutine; do not retry.
+        return
     except Exception as exc:
         logger.exception("generate_video task failed for job %s: %s", job_id, exc)
         raise self.retry(exc=exc)
@@ -42,7 +40,6 @@ def generate_video(self, job_id: str):
 
 async def _generate_video_async(job_id: str) -> None:
     async with async_session_maker() as session:
-        # --- load job ---
         result = await session.execute(
             select(VideoJob).where(VideoJob.id == uuid.UUID(job_id))
         )
@@ -51,97 +48,108 @@ async def _generate_video_async(job_id: str) -> None:
             logger.error("Job %s not found in DB — aborting", job_id)
             return
 
-        # --- load channel ---
         ch_result = await session.execute(
             select(YoutubeChannel).where(YoutubeChannel.id == job.channel_id)
         )
         channel = ch_result.scalar_one_or_none()
 
         try:
-            # Mark as generating
             job.status = "generating"
             await session.commit()
 
-            # --- resolve format plugin ---
-            from app.services.formats.registry import get_format_plugin
+            # --- resolve format plugin (format == genre) ---
+            from app.services.formats import get_format_plugin
 
-            fmt = get_format_plugin(job.format_slug)
+            fmt = await get_format_plugin(job.genre).prepare(job, channel)
 
-            # Build channel-level voice config (can be overridden per-job)
-            channel_config: dict = {
-                "voice_provider": channel.default_voice_provider,
-                "voice_id": channel.default_voice_id,
-                "music_category": channel.default_music_category,
-            }
-            if job.voice_provider:
-                channel_config["voice_provider"] = job.voice_provider
-            if job.voice_id:
-                channel_config["voice_id"] = job.voice_id
-
-            # --- run format plugin (generates script, SEO, cost estimate) ---
-            fmt_output = await fmt.prepare(job.topic, channel_config)
-
-            # Persist script & SEO back to job
-            job.script = fmt_output.script
-            job.seo_title = fmt_output.seo_title
-            job.seo_description = fmt_output.seo_description
-            job.seo_tags = fmt_output.seo_tags
-            job.cost_usd = fmt_output.cost_estimate_usd
-            job.voice_provider = fmt_output.voice_provider
-            job.voice_id = fmt_output.voice_id
-            await session.commit()
-
-            # --- run video assembly pipeline ---
+            # --- render ---
             from app.services.video.pipeline import VideoPipeline
 
-            pipeline = VideoPipeline(settings, session)
-            video_path = await pipeline.run(job)
+            result_data = await VideoPipeline().run(job, channel, fmt)
 
-            # --- update job post-render ---
-            job.video_path = video_path
-            job.status = "pending_approval"
+            # --- persist generation results ---
+            job.script = fmt.script
+            job.scene_plan = {"scenes": fmt.scenes, "image_prompts": fmt.image_prompts}
+            job.seo_title = fmt.seo_title
+            job.seo_description = fmt.seo_description
+            job.seo_tags = fmt.seo_tags
+            job.voice_id = fmt.voice_id
+            job.voice_settings = fmt.voice_settings
+            job.word_timestamps = {"words": result_data.get("word_timestamps", [])}
+            job.video_path = result_data["video_path"]
+            job.cost_usd = result_data["cost_usd"]
             job.approval_token = secrets.token_urlsafe(32)
             await session.commit()
 
-            # --- route approval ---
+            # --- approval routing ---
             sched_result = await session.execute(
                 select(ChannelSchedule).where(ChannelSchedule.channel_id == channel.id)
             )
             schedule = sched_result.scalar_one_or_none()
+            require_approval = schedule.require_approval if schedule else True
 
-            require_approval: bool = schedule.require_approval if schedule else True
-
-            if require_approval and schedule and schedule.approval_email:
-                from app.services.email_service import EmailService
-
-                email_svc = EmailService()
-                preview_url = f"{settings.APP_URL}/media/previews/{job_id}.mp4"
-                await email_svc.send_approval_request(
-                    schedule.approval_email,
-                    job_id,
-                    job.approval_token,
-                    preview_url,
-                )
-                logger.info("Approval email sent for job %s", job_id)
-            elif not require_approval:
-                # Auto-approve and queue upload immediately
+            if require_approval:
+                job.status = "pending_approval"
+                await session.commit()
+                await _maybe_send_approval_email(job_id, job, schedule)
+                logger.info("Job %s pending approval", job_id)
+            else:
                 job.status = "approved"
                 job.approved_at = datetime.now(timezone.utc)
                 await session.commit()
                 upload_to_youtube.delay(job_id)
-                logger.info("Job %s auto-approved, upload task queued", job_id)
+                logger.info("Job %s auto-approved; upload queued", job_id)
 
         except Exception as exc:
             logger.exception("Job %s failed during generation: %s", job_id, exc)
             job.status = "failed"
-            job.error_message = str(exc)
+            job.error_message = str(exc)[:1000]
             await session.commit()
-            raise
+            await _refund_once(session, job)
+            raise _AlreadyHandled() from exc
+
+
+async def _refund_once(session, job) -> None:
+    """Refund reserved credits for a failed job exactly once."""
+    credits = int(getattr(job, "credits_cost", 0) or 0)
+    if credits <= 0:
+        return
+    try:
+        from app.models.user import User
+        from app.services import credit_service
+
+        u_result = await session.execute(select(User).where(User.id == job.user_id))
+        user = u_result.scalar_one_or_none()
+        if not user:
+            return
+        await credit_service.refund_video(
+            session, user, credits=credits, model=job.model_tier, job_id=job.id
+        )
+        await session.commit()
+        logger.info("Refunded %d credits for failed job %s", credits, job.id)
+    except Exception as exc:
+        logger.error("Refund failed for job %s: %s", job.id, exc)
+
+
+async def _maybe_send_approval_email(job_id, job, schedule) -> None:
+    if not (schedule and getattr(schedule, "approval_email", None)):
+        return
+    try:
+        from app.services.email_service import EmailService
+
+        email_svc = EmailService()
+        preview_url = f"{settings.APP_URL}/media/previews/{job_id}.mp4"
+        await email_svc.send_approval_request(
+            schedule.approval_email, job_id, job.approval_token, preview_url
+        )
+        logger.info("Approval email sent for job %s", job_id)
+    except Exception as exc:
+        logger.warning("Approval email failed for job %s (non-fatal): %s", job_id, exc)
 
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=120)
 def upload_to_youtube(self, job_id: str):
-    """Upload an approved video to YouTube and update job status to posted."""
+    """Upload an approved video to YouTube via the direct YouTube API."""
     try:
         asyncio.run(_upload_async(job_id))
     except Exception as exc:
@@ -150,6 +158,9 @@ def upload_to_youtube(self, job_id: str):
 
 
 async def _upload_async(job_id: str) -> None:
+    from app.core.security import decrypt_token
+    from app.services.youtube_service import youtube_service
+
     async with async_session_maker() as session:
         result = await session.execute(
             select(VideoJob).where(VideoJob.id == uuid.UUID(job_id))
@@ -157,7 +168,7 @@ async def _upload_async(job_id: str) -> None:
         job = result.scalar_one_or_none()
         if not job or job.status != "approved":
             logger.warning(
-                "upload_to_youtube: job %s not found or not in approved state (status=%s)",
+                "upload_to_youtube: job %s not found or not approved (status=%s)",
                 job_id,
                 getattr(job, "status", "N/A"),
             )
@@ -169,69 +180,34 @@ async def _upload_async(job_id: str) -> None:
         channel = ch_result.scalar_one_or_none()
 
         try:
+            if not channel or not channel.youtube_connected:
+                raise RuntimeError("Channel is not connected to YouTube.")
+
             job.status = "uploading"
             await session.commit()
 
-            scheduled_time: str | None = None
-            if job.scheduled_for:
-                scheduled_time = job.scheduled_for.isoformat()
+            access_token = decrypt_token(channel.oauth_access_token)
+            refresh_token = decrypt_token(channel.oauth_refresh_token)
 
-            if channel.postproxy_profile_id and settings.POSTPROXY_API_KEY:
-                # --- PostProxy upload path ---
-                from app.services.postproxy_service import PostProxyService
+            res = await youtube_service.upload_video(
+                access_token,
+                refresh_token,
+                job.video_path,
+                job.seo_title or "",
+                job.seo_description or "",
+                job.seo_tags or [],
+            )
 
-                svc = PostProxyService()
-                post_id = await svc.upload_video(
-                    profile_id=channel.postproxy_profile_id,
-                    video_path=job.video_path,
-                    title=job.seo_title or "",
-                    description=job.seo_description or "",
-                    tags=job.seo_tags or [],
-                    scheduled_at=scheduled_time,
-                )
-                # PostProxy doesn't return a YouTube video_id immediately (it's async)
-                # Store the PostProxy post_id and set a provisional YouTube URL
-                job.youtube_video_id = f"postproxy:{post_id}"
-                job.youtube_url = f"https://postproxy.dev/posts/{post_id}"
-                job.status = "posted"
-                job.posted_at = datetime.now(timezone.utc)
-                await session.commit()
-                logger.info("Job %s submitted to PostProxy (post_id=%s)", job_id, post_id)
-
-            else:
-                # --- Legacy direct YouTube API upload path ---
-                from app.core.security import decrypt_token
-                from app.services.youtube_service import YouTubeService
-
-                yt = YouTubeService(
-                    settings.YOUTUBE_CLIENT_ID,
-                    settings.YOUTUBE_CLIENT_SECRET,
-                    settings.YOUTUBE_REDIRECT_URI,
-                )
-
-                access_token = decrypt_token(channel.oauth_access_token)
-                refresh_token = decrypt_token(channel.oauth_refresh_token)
-
-                video_id = await yt.upload_video(
-                    job.video_path,
-                    job.seo_title,
-                    job.seo_description,
-                    job.seo_tags,
-                    access_token,
-                    refresh_token,
-                    scheduled_time,
-                )
-
-                job.youtube_video_id = video_id
-                job.youtube_url = f"https://youtube.com/shorts/{video_id}"
-                job.status = "posted"
-                job.posted_at = datetime.now(timezone.utc)
-                await session.commit()
-                logger.info("Job %s posted via YouTube API (video_id=%s)", job_id, video_id)
+            job.youtube_video_id = res["video_id"]
+            job.youtube_url = res["url"]
+            job.status = "posted"
+            job.posted_at = datetime.now(timezone.utc)
+            await session.commit()
+            logger.info("Job %s posted (video_id=%s)", job_id, res["video_id"])
 
         except Exception as exc:
             logger.exception("Upload failed for job %s: %s", job_id, exc)
             job.status = "failed"
-            job.error_message = f"Upload failed: {exc}"
+            job.error_message = f"Upload failed: {exc}"[:1000]
             await session.commit()
             raise

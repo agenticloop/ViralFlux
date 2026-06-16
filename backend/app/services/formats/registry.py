@@ -1,44 +1,31 @@
 from __future__ import annotations
 
 from .base import FormatPlugin
-from .horror_story import HorrorStoryFormat
+from .horror_story import HorrorFormat
 from .brainrot import BrainrotFormat
-from .ranking import RankingFormat
+from .ranking import CustomFormat
 
 _REGISTRY: dict[str, FormatPlugin] = {}
 
+_FALLBACK_GENRE = "horror"
+
 
 def register(plugin: FormatPlugin) -> None:
-    """Register a FormatPlugin under its slug."""
-    _REGISTRY[plugin.slug] = plugin
+    """Register a FormatPlugin under its genre slug."""
+    _REGISTRY[plugin.genre] = plugin
 
 
-def get_format_plugin(slug: str) -> FormatPlugin:
-    """Return the registered FormatPlugin for the given slug.
-
-    Raises ValueError if the slug is not registered.
-    """
-    if slug not in _REGISTRY:
-        raise ValueError(
-            f"Unknown format: '{slug}'. "
-            f"Available formats: {sorted(_REGISTRY.keys())}"
-        )
-    return _REGISTRY[slug]
+def get_format_plugin(genre: str) -> FormatPlugin:
+    """Return the FormatPlugin for a genre slug, falling back to horror."""
+    return _REGISTRY.get(genre) or _REGISTRY[_FALLBACK_GENRE]
 
 
 def list_formats() -> list[dict]:
     """Return a summary list of all registered formats."""
-    return [
-        {
-            "slug": plugin.slug,
-            "name": plugin.name,
-            "min_plan": plugin.min_plan,
-        }
-        for plugin in _REGISTRY.values()
-    ]
+    return [{"genre": p.genre} for p in _REGISTRY.values()]
 
 
-# Auto-register all built-in formats on import
-register(HorrorStoryFormat())
+# Auto-register all built-in genre formats on import.
+register(HorrorFormat())
 register(BrainrotFormat())
-register(RankingFormat())
+register(CustomFormat())

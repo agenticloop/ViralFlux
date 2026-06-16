@@ -259,16 +259,18 @@ List all active YouTube channels belonging to the current user, including their 
     "channel_name": "Horror Stories Channel",
     "youtube_channel_id": "UCxxxxxxxxxxxxxxx",
     "oauth_expiry": "2026-07-09T12:00:00Z",
-    "default_voice_provider": "edge-tts",
-    "default_voice_id": "en-US-GuyNeural",
+    "genre": "horror",
+    "default_voice_id": "EXAVITQu4vr4xnSDxMaL",
     "default_music_category": "horror_ambient",
-    "default_format": "horror_story",
+    "default_model_tier": "Balanced",
     "is_active": true,
     "created_at": "2026-06-09T12:00:00Z",
     "schedule": null
   }
 ]
 ```
+
+`genre` is one of `horror`, `brainrot`, or `custom` (Pro/Agency). `default_voice_id` is an ElevenLabs voice ID. `default_model_tier` is `Lite` / `Balanced` / `Max` (availability gated by plan — see `pricing.md`).
 
 ---
 
@@ -281,12 +283,14 @@ Create a new channel. Enforces the plan's `channels_limit`.
 ```json
 {
   "channel_name": "Horror Stories Channel",
-  "default_voice_provider": "edge-tts",
-  "default_voice_id": "en-US-GuyNeural",
+  "genre": "horror",
+  "default_voice_id": "EXAVITQu4vr4xnSDxMaL",
   "default_music_category": "horror_ambient",
-  "default_format": "horror_story"
+  "default_model_tier": "Balanced"
 }
 ```
+
+`genre` must be allowed by the user's plan (Free: `horror` **or** `brainrot`; `custom` requires Pro+).
 
 **Response (201 Created):** The created channel object (same structure as list item above).
 
@@ -311,10 +315,10 @@ Update channel settings. All fields are optional.
 ```json
 {
   "channel_name": "Creepy Tales",
-  "default_voice_provider": "elevenlabs",
-  "default_voice_id": "adam",
+  "genre": "horror",
+  "default_voice_id": "pNInz6obpgDQGcFmaJgB",
   "default_music_category": "horror_ambient",
-  "default_format": "horror_story"
+  "default_model_tier": "Max"
 }
 ```
 
@@ -328,7 +332,7 @@ Soft-delete a channel (`is_active = False`). Returns `204 No Content`.
 
 ### POST /api/v1/channels/{channel_id}/connect-youtube
 
-Initiate the YouTube OAuth 2.0 flow. Returns a Google OAuth authorization URL.
+Initiate the **direct** YouTube OAuth 2.0 flow (multi-account; PostProxy removed). Returns a Google OAuth authorization URL.
 
 **Response (200 OK):**
 
@@ -342,9 +346,9 @@ Redirect the user to `oauth_url`. After they grant permission, Google redirects 
 
 ---
 
-### GET /api/v1/channels/{channel_id}/oauth-callback
+### GET /api/v1/channels/youtube/callback
 
-OAuth callback handler. Exchanges the authorization code for tokens, stores them encrypted, and fetches the YouTube channel ID. This endpoint is called automatically by Google's redirect — do not call it manually.
+OAuth callback handler (must match `YOUTUBE_REDIRECT_URI`). Exchanges the authorization code for tokens, stores them encrypted per channel, and fetches the YouTube channel ID. This endpoint is called automatically by Google's redirect — do not call it manually.
 
 **Response (200 OK):**
 
@@ -378,8 +382,10 @@ Create or update the posting schedule for a channel (upsert).
 
 - `frequency_days`: post every N days
 - `require_approval`: if false, videos are auto-approved and uploaded without email review
-- `auto_topic`: if true, Gemini picks the topic from Reddit trending posts
-- `topics_queue`: manual topic list; used in order before AI picks if `auto_topic` is true
+- `auto_topic`: if true, Gemini suggests a topic when the queue is empty (no Reddit/trend source)
+- `topics_queue`: manual topic list; used in order before Gemini suggests if `auto_topic` is true
+
+The `beat` scheduler's `scan_schedules` task reads these fields every 5 minutes to enqueue due posts.
 
 ---
 
@@ -444,14 +450,14 @@ Queue a single video generation job. Returns `202 Accepted` immediately — the 
 {
   "channel_id": "channel-uuid",
   "topic": "The night I heard something in the walls",
-  "format": "horror_story",
-  "voice_provider": "elevenlabs",
-  "voice_id": "adam",
+  "model_tier": "Balanced",
+  "duration": "60s",
+  "voice_id": "pNInz6obpgDQGcFmaJgB",
   "schedule_for": "2026-06-15T18:00:00Z"
 }
 ```
 
-All fields except `channel_id` are optional. If `topic` is omitted, the AI picks one from Reddit trending. If `format` is omitted, the channel's `default_format` is used.
+All fields except `channel_id` are optional. The genre is taken from the channel. If `topic` is omitted, Gemini suggests one (no Reddit). If `model_tier`/`duration`/`voice_id` are omitted, the channel defaults are used. Tier and duration must be allowed by the user's plan (and the Max tier is subject to the monthly Max Quota — see `pricing.md`).
 
 **Response (202 Accepted):**
 
@@ -460,22 +466,24 @@ All fields except `channel_id` are optional. If `topic` is omitted, the AI picks
   "id": "job-uuid",
   "status": "queued",
   "channel_id": "channel-uuid",
-  "format_slug": "horror_story",
+  "genre": "horror",
+  "model_tier": "Balanced",
+  "duration": "60s",
   "topic": "The night I heard something in the walls",
   "script": null,
   "seo_title": null,
   "video_path": null,
   "youtube_url": null,
-  "cost_usd": null,
+  "credits_charged": 34,
   "created_at": "2026-06-09T14:00:00Z",
   "updated_at": "2026-06-09T14:00:00Z",
   ...
 }
 ```
 
-Poll `GET /videos/{id}` to track job status.
+Poll `GET /videos/{id}` to track job status. `credits_charged` is debited up front from the user's balance.
 
-**Errors:** `402 Payment Required` — monthly shorts limit reached.
+**Errors:** `402 Payment Required` — insufficient credits, or duration/tier/genre not allowed by the plan.
 
 ---
 
@@ -549,12 +557,13 @@ Queue up to 10 video jobs at once.
 {
   "channel_id": "channel-uuid",
   "count": 3,
-  "format": "horror_story",
+  "model_tier": "Lite",
+  "duration": "30s",
   "topic_list": ["Story 1", "Story 2", "Story 3"]
 }
 ```
 
-`topic_list` is optional. If provided, topics are assigned in order; remaining jobs use AI topic selection.
+`topic_list` is optional. If provided, topics are assigned in order; remaining jobs use a Gemini topic suggestion. The genre is taken from the channel. Credits for all jobs are debited up front; if the balance is insufficient the whole batch is rejected with `402`.
 
 **Response (202 Accepted):** Array of `VideoJobOut` objects.
 
@@ -585,7 +594,8 @@ Summary statistics for the current user's account.
   "posted_this_month": 12,
   "total_posted": 84,
   "total_views": 420000,
-  "cost_this_month_usd": 0.0624,
+  "credits_remaining": 2210,
+  "credits_used_this_month": 390,
   "active_channels": 3
 }
 ```
@@ -606,36 +616,36 @@ Most recent 20 video jobs, ordered by creation time descending.
     "topic": "The Cabin in the Woods",
     "title": "She Found Something in the Cabin | Horror Short",
     "channel_id": "channel-uuid",
-    "format": "horror_story",
+    "genre": "horror",
     "created_at": "2026-06-09T10:00:00Z",
     "posted_at": "2026-06-09T11:30:00Z",
-    "cost_usd": 0.0049
+    "credits_charged": 34
   }
 ]
 ```
 
 ---
 
-### GET /api/v1/dashboard/trending-topics
+### GET /api/v1/dashboard/topic-suggestions
 
-Returns AI-suggested story topics, sourced from the daily n8n trend discovery workflow and cached in Redis. Falls back to a static placeholder list if the cache is empty.
+Returns Gemini-suggested topics for a genre, generated on demand (no Reddit/trend cache — the old `trending-topics` endpoint and its n8n trend-discovery workflow were removed in v2).
+
+**Query parameters:** `genre` (`horror` | `brainrot` | `custom`), `count` (default 5).
 
 **Response (200 OK):**
 
 ```json
 {
+  "genre": "horror",
   "topics": [
     "The Watcher in the Woods",
     "Something Wrong at the Old Mill",
     "I Found My Grandfather's Diary",
     "The Night Shift at Pier 17",
     "She Texted Me from the Grave"
-  ],
-  "cached": true
+  ]
 }
 ```
-
-`cached: false` indicates the live AI cache was unavailable and the placeholder list was returned.
 
 ---
 
@@ -675,21 +685,30 @@ List all available subscription plans (public — no authentication required).
   {
     "id": "plan-uuid",
     "name": "starter",
-    "price_usd": "29.00",
-    "shorts_per_month": 20,
-    "channels_limit": 1,
+    "price_usd": "19.00",
+    "monthly_credits": 850,
+    "channels_limit": 2,
+    "max_duration": "60s",
+    "max_quota": 0,
     "features": {
-      "formats": ["horror_story"],
-      "voice_providers": ["edge-tts"],
+      "genres": ["horror", "brainrot"],
+      "model_tiers": ["Lite", "Balanced"],
       "analytics": "basic",
-      "auto_approval": false
+      "auto_approval": false,
+      "community_voices": false
     },
     "stripe_price_id": null
   }
 ]
 ```
 
-Plan names: `starter` ($29/mo, 20 shorts, 1 channel), `creator` ($79/mo, 100 shorts, 5 channels), `agency` ($199/mo, unlimited).
+Plans (authoritative breakdown in `pricing.md`):
+- `free` — $0, 30 credits, 1 channel, Lite only, Horror **or** Brainrot
+- `starter` — $19/mo, 850 credits, 2 channels, Lite + Balanced
+- `pro` — $49/mo, 2,600 credits, 5 channels, all tiers (30 Max/mo), custom genre
+- `agency` — $129/mo, 8,000 credits, 15 channels, all tiers (120 Max/mo)
+
+Users buy more credits via top-up packs (Spark/Boost/Surge/Blitz) on every plan. Stripe billing is **deferred** — `stripe_price_id` is currently `null`.
 
 ---
 
@@ -785,14 +804,22 @@ Called by n8n when it detects a video generation step has completed outside the 
 
 ### POST /api/v1/webhooks/n8n/schedule-trigger
 
-Called by n8n's scheduled posting cron workflow to trigger video generation for channels whose next post is due.
+Called by n8n's stateless cron workflows to ask the backend to run an action. n8n holds **no** tenant state — it only sends an `action`; the backend owns the per-tenant logic. This is a supplementary nudge on top of the primary `beat` scheduler.
 
 **Request body:**
 
 ```json
 {
-  "channel_id": "channel-uuid"
+  "action": "scan_schedules"
 }
 ```
 
-Internally calls the same logic as `POST /videos/generate` with `auto_topic=true`.
+`action` is one of:
+
+| Action | Effect (mirrors a beat task) |
+|---|---|
+| `scan_schedules` | Scan enabled channel schedules and enqueue any due posts |
+| `sync_analytics` | Enqueue a YouTube Analytics refresh for all channels |
+| `send_approval_reminders` | Email reminders for videos still awaiting approval |
+
+**Response (200 OK):** `{ "success": true, "message": "...", "task_id": "..." }`

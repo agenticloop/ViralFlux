@@ -48,11 +48,12 @@ Open `.env` in your editor. The file is organized into sections explained below.
 
 ```dotenv
 APP_ENV=development          # Use "production" on a live server
-APP_SECRET_KEY=...           # Min 64 random characters — used for session signing
+APP_SECRET_KEY=...           # Min 64 random characters — also the n8n X-Webhook-Secret
 APP_URL=http://localhost      # Public-facing URL (no trailing slash)
-NEXT_PUBLIC_APP_URL=http://localhost
-NEXT_PUBLIC_API_URL=http://localhost/api
-TIMEZONE=America/New_York    # IANA timezone for scheduler and n8n
+FRONTEND_URL=http://localhost:3000   # Used for OAuth/redirect links back to the UI
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+TIMEZONE=America/Los_Angeles  # IANA timezone for the beat scheduler and n8n
 ```
 
 ### Section: PostgreSQL
@@ -72,11 +73,11 @@ The `DATABASE_URL` must match the three credentials above. SQLAlchemy uses `+asy
 
 ```dotenv
 REDIS_URL=redis://redis:6379/0
-CELERY_BROKER_URL=redis://redis:6379/0
-CELERY_RESULT_BACKEND=redis://redis:6379/1
+CELERY_BROKER_URL=redis://redis:6379/1
+CELERY_RESULT_BACKEND=redis://redis:6379/2
 ```
 
-These point at the Redis container by service name. No changes needed for local development.
+These point at the Redis container by service name (cache on DB 0, Celery broker on DB 1, results on DB 2). No changes needed for local development. The `worker` and `beat` services share this broker.
 
 ### Section: JWT Authentication
 
@@ -89,26 +90,44 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 
 Generate a strong value with: `python -c "import secrets; print(secrets.token_hex(64))"`
 
-### Section: SMTP / Email
+### Section: Email (Resend)
 
 ```dotenv
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=noreply@yourdomain.com
-SMTP_PASSWORD=...            # Gmail: use an App Password, not your account password
-SMTP_FROM_NAME=ViralFlux
-SMTP_FROM_EMAIL=noreply@yourdomain.com
+RESEND_API_KEY=...                          # https://resend.com/api-keys
+EMAIL_FROM=ViralFlux <noreply@yourdomain.com>
 ```
 
-Email is used for OTP verification and approval notifications. In development, if SMTP is not configured, OTPs are printed to the backend container log — check `make logs` after registration.
+Transactional email (OTP verification, approval notifications) is sent via [Resend](https://resend.com) — SMTP has been removed. In development, if `RESEND_API_KEY` is not set, OTPs are printed to the backend container log — check `make logs` after registration.
 
 ### Section: Encryption
 
 ```dotenv
-ENCRYPTION_KEY=...   # 64-char hex string — encrypts YouTube OAuth tokens at rest
+ENCRYPTION_KEY=...   # urlsafe-base64 Fernet key — encrypts YouTube OAuth tokens at rest
 ```
 
-Generate with: `python -c "import secrets; print(secrets.token_hex(32))"`
+Generate with: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
+
+### Section: LLM / TTS / Images (v2 stack)
+
+```dotenv
+# LLM — Gemini ONLY, exposed to users as Lite / Balanced / Max (see pricing.md)
+GOOGLE_AI_API_KEY=...
+GEMINI_MODEL_LITE=gemini-3.1-flash-lite
+GEMINI_MODEL_BALANCED=gemini-3.1-flash
+GEMINI_MODEL_MAX=gemini-3.5-flash
+
+# TTS — ElevenLabs ONLY
+ELEVENLABS_API_KEY=...
+ELEVENLABS_MODEL=eleven_flash_v2_5
+ELEVENLABS_BASE_URL=https://api.elevenlabs.io
+
+# Images — Imagen 4 Fast (Horror genre). Brainrot uses self-hosted CC0 footage.
+IMAGE_PROVIDER=imagen
+IMAGEN_MODEL=imagen-4.0-fast-generate-001
+```
+
+The real Gemini model IDs are env-configurable so the underlying model behind each
+UI tier can be swapped without a code change. Users only ever see "Lite / Balanced / Max".
 
 ---
 
@@ -118,21 +137,22 @@ Generate with: `python -c "import secrets; print(secrets.token_hex(32))"`
 
 | Key | Variable | Where to get it |
 |---|---|---|
-| Google AI (Gemini) | `GOOGLE_AI_API_KEY` | https://aistudio.google.com/app/apikey |
-| Pexels | `PEXELS_API_KEY` | https://www.pexels.com/api/ (free) |
-| OpenAI | `OPENAI_API_KEY` | https://platform.openai.com/api-keys |
+| Google AI (Gemini + Imagen) | `GOOGLE_AI_API_KEY` | https://aistudio.google.com/app/apikey |
+| ElevenLabs | `ELEVENLABS_API_KEY` | https://elevenlabs.io/app/settings/api-keys |
 | YouTube OAuth client ID | `YOUTUBE_CLIENT_ID` | Google Cloud Console → APIs & Services → Credentials |
 | YouTube OAuth client secret | `YOUTUBE_CLIENT_SECRET` | Same as above |
 
-**Google AI (Gemini)** drives all script and story generation. Without it, no videos can be created.
+**Google AI** drives all script/SEO generation (Gemini, 3 tiers) **and** image generation
+for the Horror genre (Imagen 4 Fast). Without it, no videos can be created.
 
-**Pexels** provides the stock images used in video backgrounds. Without it, the image sourcing step fails.
+**ElevenLabs** is the only TTS provider — it produces narration and the word-level
+timestamps used for captions. Without it, no voiceover or captions are produced.
 
-**OpenAI (GPT-4o-mini)** handles all SEO metadata generation (title, description, tags). Without it, videos are generated without SEO data.
-
-**YouTube OAuth credentials** are required to connect a YouTube channel and upload videos. Set `YOUTUBE_REDIRECT_URI` to match your deployment URL:
-- Local dev: `http://localhost/api/v1/channels/{channel_id}/oauth-callback`
-- Production: `https://yourdomain.com/api/v1/channels/{channel_id}/oauth-callback`
+**YouTube OAuth credentials** are required to connect channels and upload videos via
+**direct multi-account OAuth** (PostProxy has been removed). Set `YOUTUBE_REDIRECT_URI`
+to match your deployment:
+- Local dev: `http://localhost:8000/api/v1/channels/youtube/callback`
+- Production: `https://yourdomain.com/api/v1/channels/youtube/callback`
 
 Add the redirect URI to your Google Cloud Console OAuth app's authorized redirect URIs.
 
@@ -140,13 +160,14 @@ Add the redirect URI to your Google Cloud Console OAuth app's authorized redirec
 
 | Key | Variable | Effect if missing |
 |---|---|---|
-| ElevenLabs | `ELEVENLABS_API_KEY` | Falls back to free edge-tts voice |
-| Google TTS | `GOOGLE_TTS_API_KEY` | Falls back to edge-tts |
-| Pixabay | `PIXABAY_API_KEY` | Only Pexels is used for images |
-| Unsplash | `UNSPLASH_ACCESS_KEY` | Only Pexels/Pixabay used |
-| Reddit | `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` | AI topic discovery from Reddit disabled |
-| Stripe | `STRIPE_SECRET_KEY` / etc. | Billing UI shows "coming soon"; no payments |
+| Resend | `RESEND_API_KEY` | OTP/approval emails are logged to stdout instead of sent |
+| Stripe | `STRIPE_SECRET_KEY` / etc. | Billing/credits-purchase UI shows "coming soon" (Stripe is deferred) |
 | n8n | `N8N_PASSWORD` | n8n admin panel uses default (change this!) |
+
+> **Removed in v2 — do not add these back:** `OPENAI_API_KEY`, `PEXELS_API_KEY`,
+> `PIXABAY_API_KEY`, `UNSPLASH_ACCESS_KEY`, `GOOGLE_TTS_API_KEY`, edge-tts, and all
+> `REDDIT_*` / PRAW and `POSTPROXY_*` variables. Image stock vendors, the second LLM,
+> the alternate TTS providers, Reddit topic discovery, and PostProxy uploads are gone.
 
 ---
 
@@ -158,9 +179,11 @@ make up
 
 This runs `docker compose up -d` which builds all images on first run (allow 3–5 minutes) and starts all containers in the background.
 
+This also starts the `worker` (Celery video tasks) and `beat` (the DB-driven scheduler running `scan_schedules` every 5 min and `sync_analytics` daily) containers.
+
 On first boot, the backend container automatically:
 1. Runs Alembic database migrations (`alembic upgrade head`)
-2. Seeds the database with the three default plans (Starter, Creator, Agency) and the content format registry
+2. Seeds the database with the default plans (Free, Starter, Pro, Agency — see `pricing.md`), the credit/pricing constants, and the genre registry
 
 ---
 
@@ -180,10 +203,13 @@ postgres    postgres:16-alpine  Up (healthy)
 redis       redis:7-alpine      Up (healthy)
 backend     viralflux-backend   Up
 worker      viralflux-backend   Up
+beat        viralflux-backend   Up
 frontend    viralflux-frontend  Up
 n8n         n8nio/n8n:latest    Up
 nginx       nginx:1.25-alpine   Up
 ```
+
+Tail just the scheduler or worker with `make logs-beat` / `make logs-worker`.
 
 Wait until `postgres` and `redis` show `(healthy)`. The `backend` container waits for both before starting, so if you see it restarting, just wait another 30 seconds.
 
@@ -217,7 +243,7 @@ Once all services are running:
 5. Enter the OTP at http://localhost/verify
 6. You are now logged in and on the dashboard
 
-Your account is automatically assigned the **Starter** plan.
+Your account is automatically assigned the **Free** plan (30 credits, 1 channel, Lite model). Upgrade to Starter/Pro/Agency for more credits, channels, genres, and the Balanced/Max models — see `pricing.md` for the full plan and credit breakdown.
 
 ---
 
@@ -225,7 +251,7 @@ Your account is automatically assigned the **Starter** plan.
 
 1. From the dashboard, click **Channels** in the sidebar
 2. Click **Add Channel** and give it a name (e.g., "Horror Stories Channel")
-3. Choose default voice, music category, and content format
+3. Choose the genre (Horror, Brainrot, or — on Pro/Agency — a custom genre), default ElevenLabs voice, and music bucket
 4. Click **Save** to create the channel record
 5. Click **Connect YouTube** on the new channel card
 6. You will be redirected to Google's OAuth consent screen

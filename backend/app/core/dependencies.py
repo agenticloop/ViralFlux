@@ -12,9 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import async_session_maker
 from app.core.security import decode_token
 
-bearer_scheme = HTTPBearer(auto_error=False)
+from app.core.pricing import PLAN_ORDER  # noqa: F401  (free<starter<pro<agency)
 
-PLAN_ORDER = {"starter": 0, "creator": 1, "agency": 2}
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

@@ -1,30 +1,19 @@
-from .base import TTSService, TTSResult
-from .edge_tts import EdgeTTSService
-from .elevenlabs import ElevenLabsService
-from .google_tts import GoogleTTSService
+"""TTS layer — ElevenLabs only.
 
+edge-tts and google-tts have been removed; ElevenLabs is the sole provider.
+"""
+from __future__ import annotations
 
-def get_tts_service(provider: str) -> TTSService:
-    """Factory: return the TTS service for the given provider string.
-
-    Defaults to EdgeTTSService (free, no API key required).
-    """
-    match provider:
-        case "edge-tts":
-            return EdgeTTSService()
-        case "elevenlabs":
-            return ElevenLabsService()
-        case "google-tts":
-            return GoogleTTSService()
-        case _:
-            return EdgeTTSService()  # safe free default
-
+from .base import TTSResult, TTSService
+from .elevenlabs import ElevenLabsError, ElevenLabsService, elevenlabs_service
+from .voice_catalog import recommended_voices, voice_catalog
 
 __all__ = [
-    "TTSService",
     "TTSResult",
-    "EdgeTTSService",
+    "TTSService",
     "ElevenLabsService",
-    "GoogleTTSService",
-    "get_tts_service",
+    "ElevenLabsError",
+    "elevenlabs_service",
+    "voice_catalog",
+    "recommended_voices",
 ]

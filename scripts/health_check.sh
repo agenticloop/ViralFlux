@@ -61,7 +61,7 @@ ${COMPOSE_CMD} ps 2>&1 || true
 echo ""
 
 # Expected services
-EXPECTED_SERVICES=("postgres" "redis" "backend" "worker" "frontend" "n8n" "nginx")
+EXPECTED_SERVICES=("postgres" "redis" "backend" "worker" "beat" "frontend" "n8n" "nginx")
 
 for service in "${EXPECTED_SERVICES[@]}"; do
   status=$(${COMPOSE_CMD} ps --status running --format "{{.Name}}" 2>/dev/null | grep -w "^${service}$" || echo "")

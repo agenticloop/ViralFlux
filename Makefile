@@ -13,7 +13,7 @@ RED     := \033[31m
 
 COMPOSE := docker compose
 
-.PHONY: help up down logs migrate shell-backend shell-frontend shell-db build restart ps seed
+.PHONY: help up down logs logs-worker logs-beat migrate shell-backend shell-frontend shell-db build restart ps seed
 
 ## help: Show this help message
 help:
@@ -49,6 +49,14 @@ restart:
 ## logs: Follow log output for all services (Ctrl-C to exit)
 logs:
 	$(COMPOSE) logs -f
+
+## logs-worker: Follow Celery worker logs (video generation tasks)
+logs-worker:
+	$(COMPOSE) logs -f worker
+
+## logs-beat: Follow Celery beat scheduler logs (scan_schedules, sync_analytics)
+logs-beat:
+	$(COMPOSE) logs -f beat
 
 ## ps: Show status of all running containers
 ps:

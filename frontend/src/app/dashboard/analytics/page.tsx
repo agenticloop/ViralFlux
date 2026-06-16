@@ -13,19 +13,12 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts"
-import {
-  Eye,
-  Video,
-  DollarSign,
-  TrendingUp,
-  Trophy,
-} from "lucide-react"
+import { Eye, Video, Coins, TrendingUp, Trophy } from "lucide-react"
 import StatsCard from "@/components/dashboard/StatsCard"
 import { LoadingSkeleton } from "@/components/shared/LoadingSpinner"
 import { dashboardAPI, videosAPI } from "@/lib/api"
-import { formatCost, formatNumber, timeAgo } from "@/lib/utils"
+import { formatCredits, formatNumber, timeAgo } from "@/lib/utils"
 import type { DashboardStats, VideoJob } from "@/types"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 
@@ -35,7 +28,7 @@ const DATE_RANGES = [
   { label: "90 days", value: 90 },
 ]
 
-// Mock analytics data points
+// Mock daily analytics points
 const generateMockData = (days: number) => {
   return Array.from({ length: days }, (_, i) => {
     const date = new Date()
@@ -44,15 +37,15 @@ const generateMockData = (days: number) => {
       date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
       views: Math.floor(Math.random() * 50000) + 5000,
       videos: Math.floor(Math.random() * 5) + 1,
-      cost: parseFloat((Math.random() * 0.5 + 0.3).toFixed(2)),
+      credits: Math.floor(Math.random() * 120) + 20,
     }
   })
 }
 
-const FORMAT_DATA = [
-  { format: "Horror Story", count: 48, views: 385000 },
-  { format: "Brainrot", count: 0, views: 0 },
-  { format: "Listicle", count: 0, views: 0 },
+const GENRE_DATA = [
+  { genre: "Horror", count: 48, views: 385000 },
+  { genre: "Brainrot", count: 22, views: 142000 },
+  { genre: "Custom", count: 6, views: 31000 },
 ]
 
 export default function AnalyticsPage() {
@@ -74,15 +67,15 @@ export default function AnalyticsPage() {
   })
 
   const { data: topVideosData, isLoading: videosLoading } = useQuery<{
-    videos: VideoJob[]
+    items: VideoJob[]
   }>({
-    queryKey: ["videos", { status: "posted", limit: 5 }],
+    queryKey: ["videos", { status: "posted", page_size: 5 }],
     queryFn: () =>
-      videosAPI.list({ status: "posted", limit: 5 }).then((r) => r.data),
+      videosAPI.list({ status: "posted", page_size: 5 }).then((r) => r.data),
   })
 
   const chartData = generateMockData(dateRange)
-  const topVideos = topVideosData?.videos ?? []
+  const topVideos = topVideosData?.items ?? []
 
   return (
     <div className="max-w-7xl space-y-6">
@@ -123,7 +116,6 @@ export default function AnalyticsPage() {
               icon={Eye}
               label="Total Views"
               value={formatNumber(stats?.total_views ?? 0)}
-              change={stats?.views_change_pct}
               iconColor="text-blue-600 dark:text-blue-400"
               iconBg="bg-blue-100 dark:bg-blue-900/20"
             />
@@ -131,17 +123,15 @@ export default function AnalyticsPage() {
               icon={Video}
               label="Videos Posted"
               value={formatNumber(stats?.videos_posted ?? 0)}
-              change={stats?.videos_change_pct}
               iconColor="text-purple-600 dark:text-purple-400"
               iconBg="bg-purple-100 dark:bg-purple-900/20"
             />
             <StatsCard
-              icon={DollarSign}
-              label="Total Spend"
-              value={formatCost(stats?.cost_this_month ?? 0)}
-              change={stats?.cost_change_pct}
-              iconColor="text-green-600 dark:text-green-400"
-              iconBg="bg-green-100 dark:bg-green-900/20"
+              icon={Coins}
+              label="Credits Used"
+              value={formatCredits(stats?.credits_used_this_period ?? 0)}
+              iconColor="text-amber-600 dark:text-amber-400"
+              iconBg="bg-amber-100 dark:bg-amber-900/20"
             />
             <StatsCard
               icon={TrendingUp}
@@ -149,9 +139,7 @@ export default function AnalyticsPage() {
               value={
                 stats?.videos_posted
                   ? formatNumber(
-                      Math.round(
-                        (stats.total_views ?? 0) / stats.videos_posted
-                      )
+                      Math.round((stats.total_views ?? 0) / stats.videos_posted)
                     )
                   : "0"
               }
@@ -204,11 +192,11 @@ export default function AnalyticsPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Videos by Format */}
+        {/* Videos by Genre */}
         <div className="bg-card border border-border rounded-xl p-5">
-          <h3 className="text-foreground font-bold mb-4">Videos by Format</h3>
+          <h3 className="text-foreground font-bold mb-4">Videos by Genre</h3>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={FORMAT_DATA} layout="vertical">
+            <BarChart data={GENRE_DATA} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
               <XAxis
                 type="number"
@@ -217,7 +205,7 @@ export default function AnalyticsPage() {
               />
               <YAxis
                 type="category"
-                dataKey="format"
+                dataKey="genre"
                 stroke={chart.axis}
                 tick={{ fill: chart.tick, fontSize: 10 }}
                 width={70}
@@ -237,10 +225,10 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Cost Over Time */}
+      {/* Daily Credits Used */}
       <div className="bg-card border border-border rounded-xl p-5">
         <h3 className="text-foreground font-bold mb-4">
-          Daily Spend ({dateRange}d)
+          Daily Credits Used ({dateRange}d)
         </h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData}>
@@ -254,7 +242,7 @@ export default function AnalyticsPage() {
             <YAxis
               stroke={chart.axis}
               tick={{ fill: chart.tick, fontSize: 10 }}
-              tickFormatter={(v) => `$${v}`}
+              tickFormatter={(v) => formatCredits(v)}
             />
             <Tooltip
               contentStyle={{
@@ -264,9 +252,9 @@ export default function AnalyticsPage() {
                 color: chart.tooltipText,
                 fontSize: "12px",
               }}
-              formatter={(v: number) => [`$${v}`, "Cost"]}
+              formatter={(v: number) => [`${formatCredits(v)} credits`, "Used"]}
             />
-            <Bar dataKey="cost" fill="#22C55E" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="credits" fill="#22C55E" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -299,7 +287,7 @@ export default function AnalyticsPage() {
                     Status
                   </th>
                   <th className="text-muted-foreground text-xs font-medium pb-3 pr-4">
-                    Cost
+                    Credits
                   </th>
                   <th className="text-muted-foreground text-xs font-medium pb-3">
                     Posted
@@ -324,8 +312,8 @@ export default function AnalyticsPage() {
                       <StatusBadge status={video.status} />
                     </td>
                     <td className="py-3 pr-4 text-muted-foreground text-sm">
-                      {video.cost_usd !== null
-                        ? formatCost(video.cost_usd)
+                      {video.credits_cost != null
+                        ? `${formatCredits(video.credits_cost)} cr`
                         : "—"}
                     </td>
                     <td className="py-3 text-muted-foreground text-sm">

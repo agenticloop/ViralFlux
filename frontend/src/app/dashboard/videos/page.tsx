@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import Link from "next/link"
 import { Video, Plus, Filter } from "lucide-react"
 import VideoCard from "@/components/dashboard/VideoCard"
 import { LoadingSkeleton } from "@/components/shared/LoadingSpinner"
@@ -15,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { videosAPI, channelsAPI } from "@/lib/api"
+import { GENRES } from "@/types"
 import type { VideoJob, Channel } from "@/types"
 import { useUIStore } from "@/store/uiStore"
 
@@ -27,44 +27,48 @@ const STATUS_OPTIONS = [
   { value: "uploading", label: "Uploading" },
   { value: "posted", label: "Posted" },
   { value: "failed", label: "Failed" },
+  { value: "rejected", label: "Rejected" },
 ]
 
 export default function VideosPage() {
   const { openGenerateModal } = useUIStore()
   const [statusFilter, setStatusFilter] = useState("all")
   const [channelFilter, setChannelFilter] = useState("all")
+  const [genreFilter, setGenreFilter] = useState("all")
   const [page, setPage] = useState(1)
   const pageSize = 12
 
-  const { data: channelsData } = useQuery<{ channels: Channel[] }>({
+  const { data: channels } = useQuery<Channel[]>({
     queryKey: ["channels"],
     queryFn: () => channelsAPI.list().then((r) => r.data),
   })
 
   const { data, isLoading } = useQuery<{
-    videos: VideoJob[]
+    items: VideoJob[]
     total: number
     page: number
+    page_size: number
   }>({
-    queryKey: ["videos", statusFilter, channelFilter, page],
+    queryKey: ["videos", statusFilter, channelFilter, genreFilter, page],
     queryFn: () =>
       videosAPI
         .list({
           status: statusFilter === "all" ? undefined : statusFilter,
           channel_id: channelFilter === "all" ? undefined : channelFilter,
+          genre: genreFilter === "all" ? undefined : genreFilter,
           page,
-          limit: pageSize,
+          page_size: pageSize,
         })
         .then((r) => r.data),
   })
 
-  const channels = channelsData?.channels ?? []
-  const videos = data?.videos ?? []
+  const channelList = channels ?? []
+  const videos = data?.items ?? []
   const total = data?.total ?? 0
   const totalPages = Math.ceil(total / pageSize)
 
   const channelMap = Object.fromEntries(
-    channels.map((c) => [c.id, c.channel_name])
+    channelList.map((c) => [c.id, c.channel_name])
   )
 
   return (
@@ -93,7 +97,13 @@ export default function VideosPage() {
           <Filter className="w-4 h-4" />
           <span className="text-sm">Filter:</span>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => {
+            setStatusFilter(v)
+            setPage(1)
+          }}
+        >
           <SelectTrigger className="w-44 h-9">
             <SelectValue />
           </SelectTrigger>
@@ -106,15 +116,41 @@ export default function VideosPage() {
           </SelectContent>
         </Select>
 
-        <Select value={channelFilter} onValueChange={setChannelFilter}>
+        <Select
+          value={channelFilter}
+          onValueChange={(v) => {
+            setChannelFilter(v)
+            setPage(1)
+          }}
+        >
           <SelectTrigger className="w-44 h-9">
             <SelectValue placeholder="All Channels" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Channels</SelectItem>
-            {channels.map((ch) => (
+            {channelList.map((ch) => (
               <SelectItem key={ch.id} value={ch.id}>
                 {ch.channel_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={genreFilter}
+          onValueChange={(v) => {
+            setGenreFilter(v)
+            setPage(1)
+          }}
+        >
+          <SelectTrigger className="w-40 h-9">
+            <SelectValue placeholder="All Genres" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Genres</SelectItem>
+            {GENRES.map((g) => (
+              <SelectItem key={g.value} value={g.value}>
+                {g.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -135,7 +171,9 @@ export default function VideosPage() {
             No videos found
           </h3>
           <p className="text-muted-foreground text-sm mb-6">
-            {statusFilter !== "all" || channelFilter !== "all"
+            {statusFilter !== "all" ||
+            channelFilter !== "all" ||
+            genreFilter !== "all"
               ? "Try adjusting your filters."
               : "Generate your first Short to get started."}
           </p>

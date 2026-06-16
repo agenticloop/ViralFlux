@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import logging
-from datetime import timezone
+import secrets
+from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core import genres, pricing
 from app.core.config import settings
 from app.core.dependencies import get_current_verified_user, get_db
-from app.core.security import decrypt_token, encrypt_token
+from app.core.security import encrypt_token
 from app.models.analytics import VideoAnalytic
 from app.models.channel import ChannelSchedule, YoutubeChannel
 from app.models.plan import Plan
@@ -23,11 +26,17 @@ from app.schemas.channel import (
     ScheduleConfig,
     ScheduleOut,
 )
-from app.services.postproxy_service import PostProxyError, PostProxyService
+from app.services.tts.voice_catalog import recommended_voices
+from app.services.youtube_service import youtube_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/channels", tags=["channels"])
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
 async def _get_channel_or_404(
@@ -51,6 +60,54 @@ async def _get_channel_or_404(
     return channel
 
 
+async def _load_user_plan(current_user, db: AsyncSession) -> Plan | None:
+    if not current_user.plan_id:
+        return None
+    result = await db.execute(select(Plan).where(Plan.id == current_user.plan_id))
+    return result.scalar_one_or_none()
+
+
+def _plan_name(plan: Plan | None) -> str:
+    return plan.name if plan is not None else "free"
+
+
+def _validate_genre(plan_name: str, genre: str) -> None:
+    if genre not in genres.GENRE_SLUGS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unknown genre '{genre}'.",
+        )
+    allowed = pricing.PLAN_GENRES.get(plan_name, [])
+    if genre not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Genre '{genre}' is not available on the '{plan_name}' plan.",
+        )
+
+
+def _validate_model_tier(plan_name: str, tier: str) -> None:
+    allowed = pricing.PLAN_MODELS.get(plan_name, [])
+    if tier not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Model tier '{tier}' is not available on the '{plan_name}' plan.",
+        )
+
+
+def _validate_duration(plan_name: str, duration: str) -> None:
+    allowed = pricing.PLAN_DURATIONS.get(plan_name, [])
+    if duration not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Duration '{duration}' is not available on the '{plan_name}' plan.",
+        )
+
+
+# ---------------------------------------------------------------------------
+# CRUD
+# ---------------------------------------------------------------------------
+
+
 @router.get("/", response_model=list[ChannelOut])
 async def list_channels(
     current_user=Depends(get_current_verified_user),
@@ -72,27 +129,47 @@ async def create_channel(
     current_user=Depends(get_current_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Check plan channel limit
-    if current_user.plan_id:
-        plan_result = await db.execute(select(Plan).where(Plan.id == current_user.plan_id))
-        plan = plan_result.scalar_one_or_none()
-        if plan and plan.channels_limit is not None:
-            count_result = await db.execute(
-                select(func.count()).select_from(YoutubeChannel).where(
-                    YoutubeChannel.user_id == current_user.id,
-                    YoutubeChannel.is_active == True,  # noqa: E712
-                )
+    plan = await _load_user_plan(current_user, db)
+    plan_name = _plan_name(plan)
+
+    # Plan validation: genre / model tier / duration must be allowed.
+    _validate_genre(plan_name, payload.genre)
+    _validate_model_tier(plan_name, payload.default_model_tier)
+    _validate_duration(plan_name, payload.default_duration)
+
+    # Enforce per-plan channel limit.
+    channels_limit = pricing.PLAN_CHANNELS.get(plan_name)
+    if plan is not None and plan.channels_limit is not None:
+        channels_limit = plan.channels_limit
+    if channels_limit is not None:
+        count_result = await db.execute(
+            select(func.count()).select_from(YoutubeChannel).where(
+                YoutubeChannel.user_id == current_user.id,
+                YoutubeChannel.is_active == True,  # noqa: E712
             )
-            current_count = count_result.scalar_one()
-            if current_count >= plan.channels_limit:
-                raise HTTPException(
-                    status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                    detail=f"Channel limit ({plan.channels_limit}) reached. Upgrade your plan.",
-                )
+        )
+        current_count = count_result.scalar_one()
+        if current_count >= channels_limit:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=f"Channel limit ({channels_limit}) reached. Upgrade your plan.",
+            )
+
+    genre_cfg = genres.get_genre(payload.genre)
+    music_bucket = payload.music_bucket or genre_cfg["music_bucket"]
+    voice_id = payload.voice_id or genre_cfg["default_voice_id"]
 
     channel = YoutubeChannel(
         user_id=current_user.id,
-        **payload.model_dump(),
+        channel_name=payload.channel_name,
+        genre=payload.genre,
+        seed_prompt=payload.seed_prompt,
+        seed_prompt_updated_at=datetime.utcnow() if payload.seed_prompt else None,
+        default_model_tier=payload.default_model_tier,
+        default_duration=payload.default_duration,
+        voice_id=voice_id,
+        voice_name=payload.voice_name,
+        music_bucket=music_bucket,
     )
     db.add(channel)
     await db.flush()
@@ -118,9 +195,31 @@ async def update_channel(
     db: AsyncSession = Depends(get_db),
 ):
     channel = await _get_channel_or_404(channel_id, current_user.id, db)
-    update_data = payload.model_dump(exclude_none=True)
+    plan = await _load_user_plan(current_user, db)
+    plan_name = _plan_name(plan)
+
+    update_data = payload.model_dump(exclude_unset=True)
+
+    if "genre" in update_data and update_data["genre"] is not None:
+        _validate_genre(plan_name, update_data["genre"])
+    if (
+        "default_model_tier" in update_data
+        and update_data["default_model_tier"] is not None
+    ):
+        _validate_model_tier(plan_name, update_data["default_model_tier"])
+    if (
+        "default_duration" in update_data
+        and update_data["default_duration"] is not None
+    ):
+        _validate_duration(plan_name, update_data["default_duration"])
+
     for key, value in update_data.items():
+        if value is None:
+            continue
         setattr(channel, key, value)
+        if key == "seed_prompt":
+            channel.seed_prompt_updated_at = datetime.utcnow()
+
     await db.flush()
     await db.refresh(channel)
     return ChannelOut.model_validate(channel)
@@ -137,100 +236,125 @@ async def delete_channel(
     await db.flush()
 
 
+# ---------------------------------------------------------------------------
+# YouTube OAuth (direct, multi-account)
+# ---------------------------------------------------------------------------
+
+
 @router.post("/{channel_id}/connect-youtube")
 async def connect_youtube(
     channel_id: UUID,
     current_user=Depends(get_current_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return a PostProxy OAuth URL for connecting a YouTube channel.
+    """Begin the direct Google OAuth flow for connecting this channel.
 
-    The user is redirected to Google via PostProxy. After granting access,
-    PostProxy redirects back to the frontend which should call
-    POST /{channel_id}/link-postproxy with the resulting profile_id.
-    """
-    await _get_channel_or_404(channel_id, current_user.id, db)
-
-    if not settings.POSTPROXY_API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="POSTPROXY_API_KEY is not configured.",
-        )
-
-    svc = PostProxyService()
-    try:
-        groups = await svc.list_profile_groups()
-    except PostProxyError as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
-
-    if not groups:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No PostProxy profile groups found. Create one in the PostProxy dashboard.",
-        )
-
-    profile_group_id = groups[0].get("id") or groups[0].get("profile_group_id")
-    redirect_url = f"{settings.APP_URL}/dashboard/channels/{channel_id}/postproxy-callback"
-
-    try:
-        result = await svc.initialize_connection(profile_group_id, redirect_url)
-    except PostProxyError as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
-
-    return {
-        "oauth_url": result.get("url"),
-        "connection_id": result.get("connection_id"),
-        "profile_group_id": profile_group_id,
-    }
-
-
-@router.post("/{channel_id}/link-postproxy")
-async def link_postproxy_profile(
-    channel_id: UUID,
-    payload: dict,
-    current_user=Depends(get_current_verified_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Store a PostProxy profile_id on this channel.
-
-    Call this after the user completes the PostProxy OAuth flow.
-    Body: {"profile_id": "<postproxy-profile-id>"}
+    Generates a random ``state``, stores it on the channel row, and returns the
+    Google consent-screen URL. After the user grants access Google redirects to
+    ``GET /channels/youtube/callback``.
     """
     channel = await _get_channel_or_404(channel_id, current_user.id, db)
 
-    profile_id = payload.get("profile_id", "").strip()
-    if not profile_id:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="profile_id is required.",
-        )
-
-    channel.postproxy_profile_id = profile_id
+    state = secrets.token_urlsafe(32)
+    channel.oauth_state = state
     await db.flush()
-    return {"message": "PostProxy profile linked.", "profile_id": profile_id}
 
-
-@router.get("/postproxy-profiles")
-async def list_postproxy_profiles(
-    current_user=Depends(get_current_verified_user),
-):
-    """List YouTube profiles connected to PostProxy on this account.
-
-    Use the returned profile IDs with POST /{channel_id}/link-postproxy.
-    """
-    if not settings.POSTPROXY_API_KEY:
+    try:
+        auth_url = youtube_service.get_auth_url(str(channel_id), state)
+    except RuntimeError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="POSTPROXY_API_KEY is not configured.",
+            detail=str(exc),
+        )
+    return {"auth_url": auth_url}
+
+
+@router.get("/youtube/callback")
+async def youtube_callback(
+    code: str = Query(...),
+    state: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """OAuth redirect target hit by Google (no auth dependency).
+
+    The originating channel is resolved via the opaque ``state`` we stored on
+    the row in ``connect-youtube``. Tokens + channel info are persisted
+    (tokens encrypted) and the user is redirected back to the dashboard.
+    """
+    result = await db.execute(
+        select(YoutubeChannel).where(
+            YoutubeChannel.oauth_state == state,
+            YoutubeChannel.is_active == True,  # noqa: E712
+        )
+    )
+    channel = result.scalar_one_or_none()
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid or expired OAuth state.",
         )
 
-    svc = PostProxyService()
     try:
-        profiles = await svc.list_profiles(platform="youtube")
-    except PostProxyError as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+        tokens = await youtube_service.exchange_code(code)
+    except Exception as exc:  # noqa: BLE001 - surface a clean error to caller
+        logger.warning("YouTube OAuth code exchange failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to connect YouTube channel: {exc}",
+        )
 
-    return {"profiles": profiles}
+    channel.youtube_channel_id = tokens.get("channel_id") or None
+    channel.youtube_channel_title = tokens.get("channel_title") or None
+    channel.youtube_thumbnail_url = tokens.get("thumbnail_url") or None
+    channel.google_account_email = tokens.get("email") or None
+
+    access_token = tokens.get("access_token") or ""
+    refresh_token = tokens.get("refresh_token") or ""
+    channel.oauth_access_token = encrypt_token(access_token) if access_token else None
+    channel.oauth_refresh_token = encrypt_token(refresh_token) if refresh_token else None
+
+    expiry_str = tokens.get("expiry") or ""
+    if expiry_str:
+        try:
+            channel.oauth_expiry = datetime.fromisoformat(expiry_str)
+        except ValueError:
+            channel.oauth_expiry = None
+    else:
+        channel.oauth_expiry = None
+
+    channel.oauth_state = None
+    await db.flush()
+
+    redirect_url = (
+        f"{settings.FRONTEND_URL}/dashboard/channels/{channel.id}?connected=1"
+    )
+    return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/{channel_id}/disconnect-youtube")
+async def disconnect_youtube(
+    channel_id: UUID,
+    current_user=Depends(get_current_verified_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Clear all stored OAuth tokens + connected-account info for a channel."""
+    channel = await _get_channel_or_404(channel_id, current_user.id, db)
+
+    channel.oauth_access_token = None
+    channel.oauth_refresh_token = None
+    channel.oauth_expiry = None
+    channel.oauth_state = None
+    channel.google_account_email = None
+    channel.youtube_channel_id = None
+    channel.youtube_channel_title = None
+    channel.youtube_thumbnail_url = None
+    await db.flush()
+    return {"message": "YouTube channel disconnected."}
+
+
+# ---------------------------------------------------------------------------
+# Schedule / voices / analytics
+# ---------------------------------------------------------------------------
 
 
 @router.post("/{channel_id}/schedule", response_model=ScheduleOut)
@@ -247,16 +371,27 @@ async def upsert_schedule(
     )
     schedule = result.scalar_one_or_none()
 
+    data = payload.model_dump()
     if schedule:
-        for key, value in payload.model_dump().items():
+        for key, value in data.items():
             setattr(schedule, key, value)
     else:
-        schedule = ChannelSchedule(channel_id=channel_id, **payload.model_dump())
+        schedule = ChannelSchedule(channel_id=channel_id, **data)
         db.add(schedule)
 
     await db.flush()
     await db.refresh(schedule)
     return ScheduleOut.model_validate(schedule)
+
+
+@router.get("/{channel_id}/voices")
+async def channel_voices(
+    channel_id: UUID,
+    current_user=Depends(get_current_verified_user),
+    db: AsyncSession = Depends(get_db),
+):
+    channel = await _get_channel_or_404(channel_id, current_user.id, db)
+    return {"voices": recommended_voices(channel.genre)}
 
 
 @router.get("/{channel_id}/analytics")

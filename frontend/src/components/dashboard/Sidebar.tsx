@@ -8,8 +8,8 @@ import {
   Tv2,
   Video,
   BarChart3,
+  CreditCard,
   Settings,
-  Zap,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -40,6 +40,11 @@ const navItems = [
     href: "/dashboard/analytics",
     icon: BarChart3,
     label: "Analytics",
+  },
+  {
+    href: "/dashboard/billing",
+    icon: CreditCard,
+    label: "Billing",
   },
   {
     href: "/dashboard/settings",

@@ -71,25 +71,49 @@ The following variables require production-specific values. All others can be co
 APP_ENV=production
 APP_SECRET_KEY=<generate: python -c "import secrets; print(secrets.token_hex(64))">
 APP_URL=https://yourdomain.com
+FRONTEND_URL=https://yourdomain.com
 NEXT_PUBLIC_APP_URL=https://yourdomain.com
-NEXT_PUBLIC_API_URL=https://yourdomain.com/api
+NEXT_PUBLIC_API_URL=https://yourdomain.com/api/v1
 
 POSTGRES_PASSWORD=<strong random password>
 DATABASE_URL=postgresql+asyncpg://viralflux_user:<password>@postgres:5432/viralflux
 
 JWT_SECRET_KEY=<generate: python -c "import secrets; print(secrets.token_hex(64))">
 
-ENCRYPTION_KEY=<generate: python -c "import secrets; print(secrets.token_hex(32))">
+ENCRYPTION_KEY=<generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())">
+
+# Email (Resend — SMTP removed)
+RESEND_API_KEY=<from resend.com>
+EMAIL_FROM=ViralFlux <noreply@yourdomain.com>
+
+# LLM (Gemini-only, 3 tiers) + TTS (ElevenLabs-only) + Images (Imagen 4 Fast)
+GOOGLE_AI_API_KEY=<from aistudio.google.com>
+GEMINI_MODEL_LITE=gemini-3.1-flash-lite
+GEMINI_MODEL_BALANCED=gemini-3.1-flash
+GEMINI_MODEL_MAX=gemini-3.5-flash
+ELEVENLABS_API_KEY=<from elevenlabs.io>
+ELEVENLABS_MODEL=eleven_flash_v2_5
+ELEVENLABS_BASE_URL=https://api.elevenlabs.io
+IMAGE_PROVIDER=imagen
+IMAGEN_MODEL=imagen-4.0-fast-generate-001
+
+# Video probing
+FFPROBE_PATH=/usr/bin/ffprobe
 
 N8N_PASSWORD=<strong random password>
 N8N_ENCRYPTION_KEY=<generate: python -c "import secrets; print(secrets.token_hex(32))">
 N8N_HOST=yourdomain.com
 N8N_WEBHOOK_URL=https://yourdomain.com/n8n/
 
-YOUTUBE_REDIRECT_URI=https://yourdomain.com/api/v1/channels/{channel_id}/oauth-callback
+# YouTube — direct multi-account OAuth (PostProxy removed)
+YOUTUBE_REDIRECT_URI=https://yourdomain.com/api/v1/channels/youtube/callback
 ```
 
 **Critical:** `APP_ENV=production` enables secure httpOnly cookies (the `secure` flag), HTTPS-only behavior, and disables debug endpoints.
+
+> **Removed in v2 — do not set:** `OPENAI_API_KEY`, `PEXELS_API_KEY`, `PIXABAY_API_KEY`,
+> `UNSPLASH_ACCESS_KEY`, `GOOGLE_TTS_API_KEY`, all `REDDIT_*` and `POSTPROXY_*` vars,
+> and the old `SMTP_*` block (replaced by Resend).
 
 ---
 
@@ -267,6 +291,19 @@ make up
 make ps       # Verify all services are running
 ```
 
+`make up` starts `backend`, `worker`, and the **`beat`** scheduler (all from the same image), plus `postgres`, `redis`, `frontend`, `n8n`, and `nginx`. The `beat` service is **required** — it runs `scan_schedules` (every 5 min) and `sync_analytics` (daily); without it, scheduled posting and analytics do not run.
+
+Seed the self-hosted CC0 asset libraries (mounted read-only into backend/worker/beat at `/app/assets`) before generating videos:
+
+```bash
+bash scripts/seed_music.sh      # music buckets
+bash scripts/seed_footage.sh    # footage buckets: satisfying, parkour_clean, hydraulic, kinetic_sand
+# drop CC0 .mp3 / .mp4 files into assets/music/<bucket> and assets/footage/<bucket>, then:
+docker compose restart worker beat
+```
+
+After boot, run `bash scripts/health_check.sh` — it now also verifies the `beat` container is running.
+
 ---
 
 ## 9. Auto-Start on Server Reboot
@@ -380,8 +417,15 @@ make logs
 # Follow only the backend
 docker compose logs -f backend
 
+# Follow the worker and the beat scheduler
+make logs-worker
+make logs-beat
+
 # Check Celery worker queue
 docker compose exec backend celery -A app.workers.celery_app inspect active
+
+# Confirm the beat scheduler is registering its periodic tasks
+docker compose logs beat | grep -E "scan_schedules|sync_analytics"
 ```
 
 ### Check Resource Usage
@@ -415,7 +459,10 @@ Ensure ufw allows port 443 (`sudo ufw allow 443/tcp`) and the `nginx` service in
 Verify the `/etc/letsencrypt` volume mount is in docker-compose.yml for the nginx service and that the path in `ssl_certificate` matches the actual certbot output path.
 
 **Celery worker not processing jobs**
-Check `docker compose logs worker`. Common causes: Redis connection issue (wrong `CELERY_BROKER_URL`), or a task import error (check Python tracebacks in the log).
+Check `make logs-worker`. Common causes: Redis connection issue (wrong `CELERY_BROKER_URL`), or a task import error (check Python tracebacks in the log).
+
+**Scheduled posts / analytics never run**
+The `beat` service is the scheduler. Check `make logs-beat` — you should see `scan_schedules` ticking every 5 minutes and `sync_analytics` daily. If `beat` is missing from `make ps`, it failed to start (same image as backend — check the same env/import errors). n8n is only a supplementary nudge and cannot substitute for `beat`.
 
 **YouTube OAuth callback fails in production**
 The `YOUTUBE_REDIRECT_URI` in `.env` must exactly match the URI registered in Google Cloud Console. After changing the URL or domain, update both places.

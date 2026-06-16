@@ -18,10 +18,17 @@ class Plan(Base):
     )
     name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
     price_usd: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    shorts_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    price_yearly_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+
+    # Credit allowance economics (see app/core/pricing.py + /pricing.md)
+    credits_per_month: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    max_quota: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     channels_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # Everything else (models, durations, genres, char limit, seats, rollover…)
     features: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     stripe_price_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    stripe_price_id_yearly: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Relationships
     users: Mapped[list] = relationship("User", back_populates="plan", lazy="noload")

@@ -3,22 +3,14 @@ from __future__ import annotations
 from .base import FormatPlugin, FormatOutput
 
 
-class RankingFormat(FormatPlugin):
-    """Ranking / Listicle format — "Top 5 Scariest…" style countdown videos.
+class CustomFormat(FormatPlugin):
+    """User-defined genre (Pro+). Uses the generated-images path like horror.
 
-    This format is planned for Phase 2 and is not yet implemented.
+    The old Reddit/listicle "ranking" logic is gone; this module now hosts the
+    custom genre, which shares the shared generated-images preparation path.
     """
 
-    slug = "ranking"
-    name = "Ranking / Listicle"
-    min_plan = "creator"
+    genre = "custom"
 
-    async def prepare(
-        self,
-        topic: str | None,
-        channel_config: dict,
-    ) -> FormatOutput:
-        raise NotImplementedError("Ranking format coming in Phase 2")
-
-    def estimate_cost(self, char_count: int) -> float:
-        return 0.005
+    async def prepare(self, job, channel) -> FormatOutput:
+        return await self._prepare(job, channel)

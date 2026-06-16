@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Plus, X, Loader2, Clock } from "lucide-react"
+import { Loader2, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,15 +19,15 @@ import {
 import { channelsAPI } from "@/lib/api"
 import { TIMEZONES } from "@/types"
 import type { ChannelSchedule } from "@/types"
+import { formatDate } from "@/lib/utils"
 
 const schema = z.object({
-  enabled: z.boolean(),
+  is_enabled: z.boolean(),
   frequency_days: z.number().min(1).max(30),
-  time_of_day: z.string().regex(/^\d{2}:\d{2}$/, "Enter time as HH:MM"),
+  post_time: z.string().regex(/^\d{2}:\d{2}$/, "Enter time as HH:MM"),
   timezone: z.string().min(1),
   require_approval: z.boolean(),
   approval_email: z.string().email().optional().or(z.literal("")),
-  auto_topic: z.boolean(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -43,10 +43,6 @@ export default function ScheduleConfig({
   initialSchedule,
   onSaved,
 }: ScheduleConfigProps) {
-  const [topicQueue, setTopicQueue] = useState<string[]>(
-    initialSchedule?.topic_queue ?? []
-  )
-  const [newTopic, setNewTopic] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -60,39 +56,28 @@ export default function ScheduleConfig({
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      enabled: initialSchedule?.enabled ?? false,
+      is_enabled: initialSchedule?.is_enabled ?? false,
       frequency_days: initialSchedule?.frequency_days ?? 1,
-      time_of_day: initialSchedule?.time_of_day ?? "09:00",
+      post_time: initialSchedule?.post_time ?? "09:00",
       timezone: initialSchedule?.timezone ?? "America/New_York",
       require_approval: initialSchedule?.require_approval ?? true,
       approval_email: initialSchedule?.approval_email ?? "",
-      auto_topic: initialSchedule?.auto_topic ?? true,
     },
   })
 
-  const enabled = watch("enabled")
+  const isEnabled = watch("is_enabled")
   const requireApproval = watch("require_approval")
-  const autoTopic = watch("auto_topic")
-
-  const addTopic = () => {
-    if (newTopic.trim() && !topicQueue.includes(newTopic.trim())) {
-      setTopicQueue([...topicQueue, newTopic.trim()])
-      setNewTopic("")
-    }
-  }
-
-  const removeTopic = (topic: string) => {
-    setTopicQueue(topicQueue.filter((t) => t !== topic))
-  }
 
   const onSubmit = async (data: FormData) => {
     setError(null)
     setIsLoading(true)
     try {
       await channelsAPI.setSchedule(channelId, {
-        ...data,
+        is_enabled: data.is_enabled,
         frequency_days: Number(data.frequency_days),
-        topic_queue: topicQueue,
+        post_time: data.post_time,
+        timezone: data.timezone,
+        require_approval: data.require_approval,
         approval_email: data.approval_email || undefined,
       })
       setSuccess(true)
@@ -116,12 +101,12 @@ export default function ScheduleConfig({
           </p>
         </div>
         <Switch
-          checked={enabled}
-          onCheckedChange={(v) => setValue("enabled", v)}
+          checked={isEnabled}
+          onCheckedChange={(v) => setValue("is_enabled", v)}
         />
       </div>
 
-      {enabled && (
+      {isEnabled && (
         <div className="space-y-5">
           {/* Frequency + Time */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -142,12 +127,12 @@ export default function ScheduleConfig({
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                Time of Day
+                Post Time
               </Label>
-              <Input type="time" {...register("time_of_day")} />
-              {errors.time_of_day && (
+              <Input type="time" {...register("post_time")} />
+              {errors.post_time && (
                 <p className="text-[#E5192A] text-xs">
-                  {errors.time_of_day.message}
+                  {errors.post_time.message}
                 </p>
               )}
             </div>
@@ -198,81 +183,25 @@ export default function ScheduleConfig({
                   placeholder="approver@example.com"
                   {...register("approval_email")}
                 />
-              </div>
-            )}
-          </div>
-
-          {/* Auto Topic */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-foreground text-sm font-medium">
-                  AI Auto-Topic
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  Let AI pick trending topics automatically
-                </p>
-              </div>
-              <Switch
-                checked={autoTopic}
-                onCheckedChange={(v) => setValue("auto_topic", v)}
-              />
-            </div>
-
-            {/* Manual Topic Queue */}
-            {!autoTopic && (
-              <div className="space-y-3 pl-2 border-l-2 border-[#E5192A]/30">
-                <Label className="text-xs">Manual Topic Queue</Label>
-
-                {topicQueue.length > 0 && (
-                  <div className="space-y-2">
-                    {topicQueue.map((topic, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2"
-                      >
-                        <span className="text-muted-foreground text-xs w-5">{i + 1}.</span>
-                        <span className="text-foreground text-sm flex-1 truncate">
-                          {topic}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeTopic(topic)}
-                          className="text-muted-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                {errors.approval_email && (
+                  <p className="text-[#E5192A] text-xs">
+                    {errors.approval_email.message}
+                  </p>
                 )}
-
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add a topic..."
-                    value={newTopic}
-                    onChange={(e) => setNewTopic(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault()
-                        addTopic()
-                      }
-                    }}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addTopic}
-                    className="border-border text-muted-foreground"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
               </div>
             )}
           </div>
+
+          {/* Next run */}
+          {initialSchedule?.next_run_at && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-background border border-border rounded-lg px-4 py-3">
+              <Clock className="w-4 h-4 text-[#E5192A]" />
+              Next run scheduled for{" "}
+              <span className="text-foreground font-medium">
+                {formatDate(initialSchedule.next_run_at)}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -284,7 +213,9 @@ export default function ScheduleConfig({
       )}
       {success && (
         <div className="bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800/40 rounded-lg px-4 py-3">
-          <p className="text-green-600 dark:text-green-400 text-sm">Schedule saved successfully!</p>
+          <p className="text-green-600 dark:text-green-400 text-sm">
+            Schedule saved successfully!
+          </p>
         </div>
       )}
 

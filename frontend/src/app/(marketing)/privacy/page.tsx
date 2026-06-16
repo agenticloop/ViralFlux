@@ -26,7 +26,7 @@ When you connect a YouTube channel, we request OAuth access limited to uploading
   },
   {
     title: "AI-Generated Content",
-    content: `ViralFlux uses third-party AI services (Google Gemini, OpenAI) to generate scripts and content. Prompts sent to these services include your channel settings and niche preferences but do not include personal identifying information beyond what is necessary for generation. We do not use your content to train our own models.`,
+    content: `ViralFlux uses third-party AI services (Google Gemini for scripts, ElevenLabs for voice synthesis) to generate scripts and content. Prompts sent to these services include your channel settings and niche preferences but do not include personal identifying information beyond what is necessary for generation. We do not use your content to train our own models.`,
   },
   {
     title: "Data Sharing",
