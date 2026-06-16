@@ -1,0 +1,100 @@
+# docker-compose.prod.yml — host-coexistence overrides for the shared EC2 box.
+#
+# ViralFlux shares this host with SkyPulse behind one host nginx. This file is
+# selected via COMPOSE_FILE in .env (docker-compose.yml:docker-compose.prod.yml),
+# which deliberately EXCLUDES the repo's dev docker-compose.override.yml
+# (bind-mounts + --reload, for laptops only).
+#
+# It enforces:
+#   - container names viralflux-* (no clash with skypulse-*)
+#   - every published port bound to 127.0.0.1 on a unique number (host nginx fronts)
+#   - the repo's bundled nginx DISABLED (avoids :80 clash with host nginx / SkyPulse)
+#   - worker capped at 1 CPU / concurrency 1 AND draining all queues
+#     (-Q video,analytics,celery) so SkyPulse never gets starved and no queue stalls
+#   - renders written to /srv/viralflux/media (host nginx user `nginx` can serve it;
+#     it cannot traverse the 0700 $HOME where ./media would live)
+#   - per-service resource limits as a hard backstop
+#
+# `!override` REPLACES the base list instead of Compose's default append (which
+# would otherwise leave the public 0.0.0.0 bindings in place). Requires Compose
+# >= 2.24 (host has 2.24.5). Validated with `docker compose config` before up.
+
+services:
+  postgres:
+    container_name: viralflux-postgres
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  redis:
+    container_name: viralflux-redis
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  backend:
+    container_name: viralflux-backend
+    ports: !override
+      - "127.0.0.1:8100:8000"
+    volumes: !override
+      - /srv/viralflux/media:/app/media
+      - ./assets:/app/assets:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+
+  worker:
+    container_name: viralflux-worker
+    # concurrency 1 + 1 CPU cap (video render is CPU-heavy; protects SkyPulse).
+    # -Q lists EVERY queue the app routes to, or those tasks never drain.
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=1 -Q video,analytics,celery
+    volumes: !override
+      - /srv/viralflux/media:/app/media
+      - ./assets:/app/assets:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1536M
+
+  beat:
+    container_name: viralflux-beat
+    volumes: !override
+      - /srv/viralflux/media:/app/media
+      - ./assets:/app/assets:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+
+  frontend:
+    container_name: viralflux-frontend
+    ports: !override
+      - "127.0.0.1:3100:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  n8n:
+    container_name: viralflux-n8n
+    # Served under the /n8n/ subpath by host nginx.
+    environment:
+      N8N_PATH: /n8n/
+    ports: !override
+      - "127.0.0.1:5778:5678"
+    deploy:
+      resources:
+        limits:
+          # n8n (latest) OOMs its V8 heap under ~1G on first-boot migrations.
+          memory: 1536M
+
+  # Disable the repo's bundled nginx — the HOST nginx is the front door.
+  # Assigning an unused profile means it never starts under normal `up`.
+  nginx:
+    profiles: ["bundled-nginx-disabled"]

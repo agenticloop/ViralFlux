@@ -36,8 +36,8 @@ export default function CTABanner() {
               Start Automating Today
             </h2>
             <p className="text-white/80 text-lg mb-8 max-w-xl mx-auto">
-              Your first 3 Shorts are completely free. No credit card. No setup
-              fees. Just results.
+              Start free with 30 credits — no credit card, no setup fees. Just
+              results.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -62,7 +62,7 @@ export default function CTABanner() {
             </div>
 
             <p className="text-white/50 text-sm mt-6">
-              Join 847+ channels already automating with ViralFlux
+              No credit card required &bull; Cancel anytime
             </p>
           </div>
         </motion.div>

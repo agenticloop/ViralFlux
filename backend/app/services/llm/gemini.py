@@ -398,7 +398,7 @@ Return ONLY valid JSON with this exact shape:
                 s["start_hint"] = round(i * step, 2)
 
     # ------------------------------------------------------------------ #
-    # 2. SEO generation (replaces the deleted OpenAI SEO)
+    # 2. SEO generation (title / description / tags for the upload)
     # ------------------------------------------------------------------ #
     async def generate_seo(
         self,

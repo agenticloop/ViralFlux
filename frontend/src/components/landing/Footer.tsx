@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { Youtube, Twitter, Linkedin } from "lucide-react"
 import { Logo } from "@/components/shared/Logo"
 
 const footerLinks = {
@@ -7,17 +6,13 @@ const footerLinks = {
     { label: "Features", href: "/#features" },
     { label: "Pricing", href: "/pricing" },
     { label: "Blog", href: "/blog" },
-    { label: "Changelog", href: "#" },
   ],
-  Company: [
-    { label: "About", href: "#" },
-    { label: "Careers", href: "#" },
-    { label: "Contact", href: "#" },
+  Support: [
+    { label: "Contact", href: "mailto:support@skypulseforge.com" },
   ],
   Legal: [
     { label: "Privacy Policy", href: "/privacy" },
     { label: "Terms of Service", href: "/terms" },
-    { label: "Cookie Policy", href: "#" },
   ],
 }
 
@@ -35,29 +30,6 @@ export default function Footer() {
               AI-powered YouTube Shorts automation. Generate, voice, and post
               viral content automatically — under $0.10 per video.
             </p>
-            <div className="flex items-center gap-3 mt-6">
-              <a
-                href="#"
-                className="w-8 h-8 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-[#E5192A] transition-all"
-                aria-label="YouTube"
-              >
-                <Youtube className="w-4 h-4" />
-              </a>
-              <a
-                href="#"
-                className="w-8 h-8 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-[#E5192A] transition-all"
-                aria-label="Twitter"
-              >
-                <Twitter className="w-4 h-4" />
-              </a>
-              <a
-                href="#"
-                className="w-8 h-8 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-[#E5192A] transition-all"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="w-4 h-4" />
-              </a>
-            </div>
           </div>
 
           {/* Links */}

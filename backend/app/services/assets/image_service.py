@@ -4,7 +4,7 @@ The horror visual path (``visual == "generated_images"``) turns each scene
 description into a 9:16 vertical still via a text-to-image model, then the video
 pipeline applies a ken-burns pan/zoom. The provider is selected by
 ``settings.IMAGE_PROVIDER`` so the underlying model can swap (Imagen → z-image →
-gpt-image-mini) without touching the calling pipeline.
+nano-banana) without touching the calling pipeline.
 
 A *per-video seed* is threaded through every scene so a single video keeps a
 consistent visual identity across its scenes.
@@ -331,19 +331,6 @@ class ZImageProvider(ImageProvider):
         )
 
 
-class GptImageProvider(ImageProvider):
-    """Stub for the gpt-image-mini provider (swap-in point)."""
-
-    async def generate(self, prompt: str, seed: int, out_path: str) -> str:
-        # TODO(viralflux): Implement gpt-image-mini generation. Call the OpenAI
-        # images API (size 1024x1792 for vertical), decode the b64_json result,
-        # and write to out_path. Mirror ImagenProvider.generate.
-        raise NotImplementedError(
-            "GptImageProvider is not implemented yet. Set IMAGE_PROVIDER=imagen "
-            "or implement this provider."
-        )
-
-
 # ---------------------------------------------------------------------------
 # Factory + singleton service
 # ---------------------------------------------------------------------------
@@ -358,11 +345,9 @@ def get_image_provider() -> ImageProvider:
         return NanoBananaProvider()
     if provider == "zimage":
         return ZImageProvider()
-    if provider == "gptimage":
-        return GptImageProvider()
     raise ImageGenerationError(
         f"Unknown IMAGE_PROVIDER '{settings.IMAGE_PROVIDER}'. "
-        "Expected one of: imagen, nanobanana, zimage, gptimage."
+        "Expected one of: imagen, nanobanana, zimage."
     )
 
 

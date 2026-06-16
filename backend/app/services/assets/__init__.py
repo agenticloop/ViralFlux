@@ -9,7 +9,6 @@ Three asset sources, exposed as ready-to-use singletons:
 from __future__ import annotations
 
 from .image_service import (
-    GptImageProvider,
     ImageGenerationError,
     ImagenProvider,
     ImageProvider,
@@ -26,7 +25,6 @@ __all__ = [
     "ImageProvider",
     "ImagenProvider",
     "ZImageProvider",
-    "GptImageProvider",
     "ImageService",
     "ImageGenerationError",
     "get_image_provider",

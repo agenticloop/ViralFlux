@@ -136,7 +136,7 @@ export default function PricingSection() {
 
                 <ul className="space-y-2.5 text-sm">
                   <Feature label={`${plan.channels} channel${plan.channels > 1 ? "s" : ""}`} />
-                  <Feature label={`Up to ${plan.max_duration} videos`} />
+                  <Feature label={`Videos up to ${plan.max_duration}`} />
                   <Feature label={plan.models} />
                   <Feature label="Custom genre" on={plan.custom_genre} />
                   <Feature

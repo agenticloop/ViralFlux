@@ -8,6 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -360,23 +361,42 @@ async def get_video(
 @router.get("/{job_id}/preview")
 async def preview_video(
     job_id: UUID,
-    current_user=Depends(get_current_verified_user),
     db: AsyncSession = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False)),
+    token: str | None = Query(default=None),
 ):
-    job = await _get_job_or_404(job_id, current_user.id, db)
+    """Stream a video preview.
+
+    Accepts auth via the standard Bearer header *or* a ``?token=`` query
+    parameter — the latter is required when the caller is a ``<video src>``
+    attribute, which cannot set headers.
+    """
+    from app.core.security import decode_token
+    from app.models.user import User
+
+    raw_token = (credentials.credentials if credentials else None) or token
+    if not raw_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+    payload = decode_token(raw_token)
+    if payload is None or payload.get("type") != "access":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+
+    user_id_str = payload.get("sub")
+    if not user_id_str:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+
+    result = await db.execute(select(User).where(User.id == UUID(user_id_str)))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active or not user.is_verified:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+
+    job = await _get_job_or_404(job_id, user.id, db)
     if not job.video_path:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Video not yet generated."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Video not yet generated.")
     if not os.path.exists(job.video_path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Video file not found on disk."
-        )
-    return FileResponse(
-        path=job.video_path,
-        media_type="video/mp4",
-        filename=f"preview_{job_id}.mp4",
-    )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Video file not found on disk.")
+    return FileResponse(path=job.video_path, media_type="video/mp4", filename=f"preview_{job_id}.mp4")
 
 
 @router.post("/{job_id}/approve", response_model=VideoJobOut)

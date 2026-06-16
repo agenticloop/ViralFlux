@@ -10,8 +10,8 @@ export const metadata: Metadata = {
 
 const staticPosts = [
   {
-    slug: "how-to-grow-youtube-shorts-2024",
-    title: "How to Grow to 100K Subscribers Using YouTube Shorts in 2024",
+    slug: "how-to-grow-youtube-shorts",
+    title: "How to Grow to 100K Subscribers Using YouTube Shorts",
     excerpt:
       "Discover the exact automation strategy that helped creators grow from 0 to 100K subscribers posting nothing but AI-generated Shorts.",
     tags: ["Growth", "Strategy"],
@@ -46,8 +46,8 @@ const staticPosts = [
     date: "May 22, 2026",
   },
   {
-    slug: "youtube-shorts-algorithm-2024",
-    title: "The YouTube Shorts Algorithm in 2024: What Actually Works",
+    slug: "youtube-shorts-algorithm",
+    title: "The YouTube Shorts Algorithm: What Actually Works",
     excerpt:
       "Everything we know about how the Shorts algorithm distributes content and the specific signals that trigger viral spread.",
     tags: ["Algorithm", "Strategy"],

@@ -64,10 +64,21 @@ class YouTubeService:
     # Credential guards / lazy imports
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _is_real(value: str | None) -> bool:
+        """A credential counts as set only if it's non-blank and not a placeholder.
+
+        Lets the app ship with empty / ``REPLACE_ME*`` env values and stay
+        cleanly 'not configured' until real keys are dropped in — at which point
+        OAuth auto-enables with no code change.
+        """
+        v = (value or "").strip()
+        return bool(v) and not v.upper().startswith("REPLACE_ME")
+
     @property
     def configured(self) -> bool:
-        """True when OAuth client credentials are present."""
-        return bool(self.client_id and self.client_secret)
+        """True when real OAuth client credentials are present."""
+        return self._is_real(self.client_id) and self._is_real(self.client_secret)
 
     def _require_credentials(self) -> None:
         if not self.configured:

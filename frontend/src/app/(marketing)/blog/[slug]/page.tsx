@@ -16,8 +16,8 @@ const postsContent: Record<
     content: string
   }
 > = {
-  "how-to-grow-youtube-shorts-2024": {
-    title: "How to Grow to 100K Subscribers Using YouTube Shorts in 2024",
+  "how-to-grow-youtube-shorts": {
+    title: "How to Grow to 100K Subscribers Using YouTube Shorts",
     excerpt:
       "Discover the exact automation strategy that helped creators grow from 0 to 100K subscribers posting nothing but AI-generated Shorts.",
     tags: ["Growth", "Strategy"],
@@ -27,7 +27,7 @@ const postsContent: Record<
     content: `
 ## The YouTube Shorts Gold Rush Is Still Happening
 
-In 2024, YouTube Shorts are getting billions of daily views. The platform is actively pushing Short content to new audiences — and creators who post consistently are getting massive organic reach.
+YouTube Shorts are getting billions of daily views. The platform is actively pushing Short content to new audiences — and creators who post consistently are getting massive organic reach.
 
 The problem? Most creators don't have time to produce a Short every day.
 
@@ -53,7 +53,7 @@ That's growth that would take a manual creator years to achieve.
 
 ## Getting Started
 
-1. Create a ViralFlux account (3 free Shorts to start)
+1. Create a ViralFlux account (30 free credits to start)
 2. Connect your YouTube channel via OAuth
 3. Enable the Horror Story format
 4. Set your schedule to 3 posts/day
@@ -252,7 +252,7 @@ export default function BlogPostPage({ params }: { params: Params }) {
             Ready to automate your Shorts?
           </h3>
           <p className="text-muted-foreground text-sm mb-4">
-            Start with 3 free Shorts — no credit card required.
+            Start free with 30 credits — no credit card required.
           </p>
           <Button variant="red" asChild>
             <Link href="/register">Get Started Free</Link>

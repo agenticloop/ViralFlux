@@ -10,7 +10,7 @@ const steps = [
     step: "01",
     title: "AI Picks Topic",
     description:
-      "Our AI analyzes Reddit trends, viral patterns, and niche signals to pick a winning topic automatically — or you can specify one.",
+      "Our AI analyzes viral patterns, niche signals, and trending topics to pick a winning concept automatically — or you can specify one.",
     color: "text-purple-600 dark:text-purple-400",
     bg: "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800/30",
   },

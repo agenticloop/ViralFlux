@@ -1,6 +1,26 @@
+import asyncio
+
 from celery import Celery
 from celery.schedules import crontab
+from celery.signals import worker_process_init
+
 from app.core.config import settings
+
+
+@worker_process_init.connect
+def _dispose_engine_after_fork(**_kwargs):
+    """Dispose the SQLAlchemy async engine pool after Celery forks a worker.
+
+    The parent process creates the asyncpg connection pool bound to its event
+    loop. After fork the child inherits those connections, but asyncio.run()
+    inside a task creates a *new* event loop — asyncpg then refuses to reuse
+    the parent-loop connections and raises "future attached to a different loop".
+    Disposing here drops all inherited connections so asyncpg lazily opens fresh
+    ones on the child's own loop.
+    """
+    from app.core.database import engine
+
+    asyncio.run(engine.dispose())
 
 celery_app = Celery(
     "viralflux",

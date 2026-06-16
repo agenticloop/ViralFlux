@@ -1,0 +1,1 @@
+# Keeps the Next.js public/ dir present (the Dockerfile COPYs it). Drop static assets here.

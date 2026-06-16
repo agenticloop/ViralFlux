@@ -39,7 +39,7 @@ const features = [
     icon: TrendingUp,
     title: "Trend Detection",
     description:
-      "Scans Reddit, Twitter, and viral content daily to surface the highest-potential topics for your niche.",
+      "Analyzes viral patterns and niche signals daily to surface the highest-potential topics for your channel's genre.",
     color: "text-orange-600 dark:text-orange-400",
     bg: "bg-orange-50 border-orange-200 dark:bg-orange-900/10 dark:border-orange-900/20",
   },

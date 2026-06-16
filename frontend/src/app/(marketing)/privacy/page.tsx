@@ -54,7 +54,7 @@ All service providers are contractually bound to protect your data.`,
 • Export your data in a portable format
 • Opt out of marketing communications at any time
 
-To exercise these rights, contact us at privacy@viralflux.ai`,
+To exercise these rights, contact us at privacy@skypulseforge.com`,
   },
   {
     title: "Cookies",
@@ -83,7 +83,7 @@ export default function PrivacyPage() {
         <div className="mb-12">
           <h1 className="text-4xl font-black text-foreground mb-3">Privacy Policy</h1>
           <p className="text-muted-foreground">
-            Last updated: June 2025 &bull; Effective: June 2025
+            Last updated: June 2026 &bull; Effective: June 2026
           </p>
           <p className="text-muted-foreground mt-4 leading-relaxed">
             ViralFlux (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;) is committed to protecting your
@@ -114,10 +114,10 @@ export default function PrivacyPage() {
           <p className="text-muted-foreground text-sm">
             Questions about this policy?{" "}
             <a
-              href="mailto:privacy@viralflux.ai"
+              href="mailto:privacy@skypulseforge.com"
               className="text-[#E5192A] hover:underline"
             >
-              privacy@viralflux.ai
+              privacy@skypulseforge.com
             </a>
           </p>
           <p className="text-muted-foreground text-sm mt-2">

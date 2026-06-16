@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button"
 
 const staticPosts = [
   {
-    slug: "how-to-grow-youtube-shorts-2024",
-    title: "How to Grow to 100K Subscribers Using YouTube Shorts in 2024",
+    slug: "how-to-grow-youtube-shorts",
+    title: "How to Grow to 100K Subscribers Using YouTube Shorts",
     excerpt:
       "Discover the exact automation strategy that helped creators grow from 0 to 100K subscribers posting nothing but AI-generated Shorts.",
     tags: ["Growth", "Strategy"],

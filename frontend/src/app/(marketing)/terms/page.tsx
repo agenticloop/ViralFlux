@@ -47,7 +47,7 @@ You retain ownership of the content generated for your channels. By using the Se
   },
   {
     title: "Free Tier and Trial",
-    content: `New accounts receive 3 free video generations. After the free tier is exhausted, a paid subscription is required to continue generating videos. The free tier is subject to change or discontinuation at any time.`,
+    content: `New accounts receive 30 free credits on signup — enough to generate a few Shorts at no cost. After free credits are exhausted, a paid subscription or top-up is required to continue generating videos. The free tier is subject to change or discontinuation at any time.`,
   },
   {
     title: "Service Availability",
@@ -92,7 +92,7 @@ export default function TermsPage() {
         <div className="mb-12">
           <h1 className="text-4xl font-black text-foreground mb-3">Terms of Service</h1>
           <p className="text-muted-foreground">
-            Last updated: June 2025 &bull; Effective: June 2025
+            Last updated: June 2026 &bull; Effective: June 2026
           </p>
           <p className="text-muted-foreground mt-4 leading-relaxed">
             Please read these Terms carefully before using ViralFlux. These Terms
@@ -122,10 +122,10 @@ export default function TermsPage() {
           <p className="text-muted-foreground text-sm">
             Questions about these Terms?{" "}
             <a
-              href="mailto:legal@viralflux.ai"
+              href="mailto:legal@skypulseforge.com"
               className="text-[#E5192A] hover:underline"
             >
-              legal@viralflux.ai
+              legal@skypulseforge.com
             </a>
           </p>
           <p className="text-muted-foreground text-sm mt-2">

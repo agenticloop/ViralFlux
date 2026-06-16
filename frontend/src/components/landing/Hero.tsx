@@ -91,17 +91,22 @@ export default function Hero() {
       <div className="absolute inset-0 bg-gradient-radial from-[#E5192A]/8 via-transparent to-transparent" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#E5192A]/5 rounded-full blur-[120px]" />
 
-      {/* Floating particles */}
+      {/* Floating particles — fixed positions avoid SSR/hydration mismatch */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
+        {Array.from({ length: 20 }, (_, i) => ({
+          left: `${(i * 17 + 7) % 100}%`,
+          top: `${(i * 23 + 11) % 100}%`,
+          delay: `${((i * 3) % 9) / 10}s`,
+          duration: `${3 + (i % 4)}s`,
+        })).map((p, i) => (
           <div
             key={i}
             className="absolute w-1 h-1 bg-[#E5192A]/20 rounded-full"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
+              left: p.left,
+              top: p.top,
+              animationDelay: p.delay,
+              animation: `float ${p.duration} ease-in-out infinite`,
             }}
           />
         ))}
@@ -153,7 +158,7 @@ export default function Hero() {
             >
               <Button variant="red" size="lg" asChild className="text-base px-8">
                 <Link href="/register" className="flex items-center gap-2">
-                  Start Free (3 Shorts)
+                  Start Free — 30 Credits
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>
@@ -165,7 +170,7 @@ export default function Hero() {
               >
                 <Link href="#how-it-works" className="flex items-center gap-2">
                   <Play className="w-4 h-4" />
-                  Watch Demo
+                  See How It Works
                 </Link>
               </Button>
             </motion.div>

@@ -71,6 +71,13 @@ frontend/dist/
 frontend/build/
 frontend/node_modules/
 
+# Re-include the frontend SOURCE lib — the generic `lib/` rule above (a Python
+# build-artifact pattern) is unanchored and otherwise swallows this real source
+# directory. Re-include the directory first, then its contents (git cannot
+# re-include a file whose parent dir is excluded).
+!frontend/src/lib/
+!frontend/src/lib/**
+
 # ── Logs ──────────────────────────────────────────────────────────────────────
 *.log
 logs/
