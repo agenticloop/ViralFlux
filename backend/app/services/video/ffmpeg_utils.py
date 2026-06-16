@@ -189,13 +189,17 @@ class FFmpegUtils:
         stays clear. Output MP4 length matches the narration (shortest).
         """
         if music_path and os.path.isfile(music_path):
+            # The narration feeds TWO consumers: the sidechain key (to duck the
+            # music) AND the final mix. An ffmpeg output label is consumable only
+            # once, so the voice is asplit into [vkey] and [vmix].
             filter_complex = (
-                "[1:a]aformat=sample_rates=44100:channel_layouts=stereo[voice];"
+                "[1:a]aformat=sample_rates=44100:channel_layouts=stereo,"
+                "asplit=2[vkey][vmix];"
                 "[2:a]aformat=sample_rates=44100:channel_layouts=stereo,"
                 f"volume={music_volume}[bg];"
-                "[bg][voice]sidechaincompress=threshold=0.02:ratio=12:"
+                "[bg][vkey]sidechaincompress=threshold=0.02:ratio=12:"
                 "attack=20:release=400[ducked];"
-                "[voice][ducked]amix=inputs=2:duration=first:"
+                "[vmix][ducked]amix=inputs=2:duration=first:"
                 "dropout_transition=2[aout]"
             )
             self._run([

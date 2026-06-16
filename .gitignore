@@ -158,3 +158,12 @@ backend/alembic/versions/__pycache__/
 *.tmp
 *.temp
 .sass-cache/
+
+# Asset media binaries — placeholders + real CC0 content live outside git
+# (populate via scripts/seed_music.sh + scripts/seed_footage.sh). READMEs kept.
+assets/footage/**/*.mp4
+assets/footage/**/*.mov
+assets/footage/**/*.webm
+assets/music/**/*.mp3
+assets/music/**/*.wav
+assets/music/**/*.m4a

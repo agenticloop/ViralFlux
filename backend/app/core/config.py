@@ -46,8 +46,12 @@ class Settings(BaseSettings):
     # ------------------------------------------------ Image generation
     # Provider-agnostic. Default Imagen 4 Fast on the Google AI Studio key.
     # Swap to z-image / gpt-image-mini by changing IMAGE_PROVIDER + key.
-    IMAGE_PROVIDER: str = "imagen"  # imagen | zimage | gptimage
+    IMAGE_PROVIDER: str = "imagen"  # imagen | nanobanana | zimage | gptimage
     IMAGEN_MODEL: str = "imagen-4.0-fast-generate-001"
+    # Nano Banana Pro = Gemini 3 Pro Image (generateContent image output).
+    # Premium quality alternative to Imagen; uses its own dedicated key.
+    NANO_BANANA_PRO_API_KEY: str = ""
+    NANO_BANANA_MODEL: str = "gemini-3-pro-image-preview"
 
     # ------------------------------------------------ YouTube (direct OAuth)
     # Our own OAuth app. One user may connect channels living under different

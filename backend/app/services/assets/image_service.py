@@ -14,6 +14,7 @@ when their credentials are missing so failures are obvious and actionable.
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
 import os
@@ -30,6 +31,61 @@ _GOOGLE_AI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 # Default aspect ratio for ViralFlux verticals (1080x1920).
 _VERTICAL_ASPECT_RATIO = "9:16"
+
+# Transient-failure retry policy (matches the LLM/TTS layers). Image generation
+# is the most network-heavy pipeline step (one call per scene), so an occasional
+# timeout / reset / 429-503 must not fail an otherwise-good video.
+_MAX_RETRIES = 3
+_BACKOFF_BASE = 1.0  # seconds, exponential
+_RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+
+
+async def _post_with_retry(
+    url: str, *, params: dict, json: dict, timeout: float, label: str
+) -> dict:
+    """POST with exponential-backoff retry on transient HTTP failures.
+
+    Retries connection/read errors and retryable status codes; raises
+    ``ImageGenerationError`` on a non-retryable status or after exhausting
+    retries. Returns the decoded JSON body.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.post(url, params=params, json=json)
+            if response.status_code in _RETRYABLE_STATUS:
+                raise httpx.HTTPStatusError(
+                    f"retryable status {response.status_code}",
+                    request=response.request,
+                    response=response,
+                )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code if exc.response is not None else None
+            if status not in _RETRYABLE_STATUS:
+                body = exc.response.text[:500] if exc.response is not None else ""
+                logger.error("%s HTTP %s: %s", label, status, body)
+                raise ImageGenerationError(
+                    f"{label} API returned HTTP {status}: {body}"
+                ) from exc
+            last_exc = exc
+        except httpx.HTTPError as exc:
+            last_exc = exc
+
+        if attempt < _MAX_RETRIES:
+            delay = _BACKOFF_BASE * (2 ** (attempt - 1))
+            logger.warning(
+                "%s request failed (attempt %d/%d): %r; retrying in %.1fs",
+                label, attempt, _MAX_RETRIES, last_exc, delay,
+            )
+            await asyncio.sleep(delay)
+
+    logger.exception("%s request failed after %d attempts", label, _MAX_RETRIES)
+    raise ImageGenerationError(
+        f"{label} request failed after {_MAX_RETRIES} attempts: {last_exc!r}"
+    ) from last_exc
 
 
 class ImageGenerationError(RuntimeError):
@@ -103,16 +159,17 @@ class ImagenProvider(ImageProvider):
 
         os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
 
+        # NOTE: Imagen 4 Fast on the AI Studio (Generative Language) API rejects
+        # both `seed` and `addWatermark` ("Setting <x> is not supported."). The
+        # seed is therefore not threaded through this provider; visual coherence
+        # across scenes is steered via the prompt/style prefix instead. The seed
+        # argument is kept in the method signature for the provider contract and
+        # for providers that DO support it.
         payload = {
             "instances": [{"prompt": prompt}],
             "parameters": {
                 "sampleCount": 1,
                 "aspectRatio": _VERTICAL_ASPECT_RATIO,
-                # Imagen treats seed determinism per request; threading the same
-                # per-video seed keeps a coherent look across scenes.
-                "seed": int(seed),
-                # Required by the API when a seed is supplied.
-                "addWatermark": False,
             },
         }
 
@@ -120,24 +177,13 @@ class ImagenProvider(ImageProvider):
             "Imagen generate: model=%s seed=%d -> %s", self.model, seed, out_path
         )
 
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(
-                    self._endpoint,
-                    params={"key": self.api_key},
-                    json=payload,
-                )
-                response.raise_for_status()
-                data = response.json()
-        except httpx.HTTPStatusError as exc:
-            body = exc.response.text[:500] if exc.response is not None else ""
-            logger.error("Imagen HTTP %s: %s", exc.response.status_code, body)
-            raise ImageGenerationError(
-                f"Imagen API returned HTTP {exc.response.status_code}: {body}"
-            ) from exc
-        except httpx.HTTPError as exc:
-            logger.exception("Imagen request failed")
-            raise ImageGenerationError(f"Imagen request failed: {exc}") from exc
+        data = await _post_with_retry(
+            self._endpoint,
+            params={"key": self.api_key},
+            json=payload,
+            timeout=self.timeout,
+            label="Imagen",
+        )
 
         image_bytes = self._extract_image_bytes(data)
         with open(out_path, "wb") as f:
@@ -172,6 +218,99 @@ class ImagenProvider(ImageProvider):
             raise ImageGenerationError(
                 f"Could not decode Imagen base64 image: {exc}"
             ) from exc
+
+
+# ---------------------------------------------------------------------------
+# Nano Banana Pro (Gemini 3 Pro Image) — premium provider
+# ---------------------------------------------------------------------------
+
+
+class NanoBananaProvider(ImageProvider):
+    """Google "Nano Banana Pro" = Gemini 3 Pro Image, via ``generateContent``.
+
+    Unlike Imagen's ``:predict`` shape, the Gemini image models return the image
+    inline in a content part (``inlineData`` with base64). Higher quality/coherence
+    than Imagen 4 Fast, at higher cost — exposed as a premium swap via
+    ``IMAGE_PROVIDER=nanobanana`` and its own dedicated key.
+    """
+
+    def __init__(
+        self,
+        api_key: str | None = None,
+        model: str | None = None,
+        *,
+        timeout: float = 180.0,
+    ) -> None:
+        # Falls back to the main Google AI key if the dedicated one is unset.
+        self.api_key = (
+            api_key
+            if api_key is not None
+            else (settings.NANO_BANANA_PRO_API_KEY or settings.GOOGLE_AI_API_KEY)
+        )
+        self.model = model or settings.NANO_BANANA_MODEL
+        self.timeout = timeout
+
+    @property
+    def _endpoint(self) -> str:
+        return f"{_GOOGLE_AI_BASE}/models/{self.model}:generateContent"
+
+    async def generate(self, prompt: str, seed: int, out_path: str) -> str:
+        if not self.api_key:
+            raise ImageGenerationError(
+                "NANO_BANANA_PRO_API_KEY / GOOGLE_AI_API_KEY is not set — cannot "
+                "generate images with the Nano Banana provider."
+            )
+
+        os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+
+        # Nudge the model toward a 9:16 vertical still; it doesn't take an explicit
+        # aspectRatio param, so we steer via the prompt.
+        full_prompt = f"{prompt}\n\nVertical 9:16 aspect ratio, full-bleed composition."
+        payload = {
+            "contents": [{"parts": [{"text": full_prompt}]}],
+            "generationConfig": {"responseModalities": ["IMAGE"]},
+        }
+
+        logger.info(
+            "NanoBanana generate: model=%s seed=%d -> %s", self.model, seed, out_path
+        )
+
+        data = await _post_with_retry(
+            self._endpoint,
+            params={"key": self.api_key},
+            json=payload,
+            timeout=self.timeout,
+            label="NanoBanana",
+        )
+
+        image_bytes = self._extract_image_bytes(data)
+        with open(out_path, "wb") as f:
+            f.write(image_bytes)
+
+        logger.info("NanoBanana wrote %d bytes to %s", len(image_bytes), out_path)
+        return out_path
+
+    @staticmethod
+    def _extract_image_bytes(data: dict) -> bytes:
+        """Pull base64 image bytes from a ``generateContent`` image response."""
+        candidates = data.get("candidates") or []
+        if not candidates:
+            raise ImageGenerationError(
+                f"NanoBanana response had no candidates: {str(data)[:300]}"
+            )
+        parts = (candidates[0].get("content") or {}).get("parts") or []
+        for part in parts:
+            inline = part.get("inlineData") or part.get("inline_data")
+            if inline and inline.get("data"):
+                try:
+                    return base64.b64decode(inline["data"])
+                except (ValueError, TypeError) as exc:
+                    raise ImageGenerationError(
+                        f"Could not decode NanoBanana base64 image: {exc}"
+                    ) from exc
+        raise ImageGenerationError(
+            f"NanoBanana response contained no image part: {str(data)[:300]}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -215,13 +354,15 @@ def get_image_provider() -> ImageProvider:
     provider = (settings.IMAGE_PROVIDER or "imagen").lower()
     if provider == "imagen":
         return ImagenProvider()
+    if provider in ("nanobanana", "nano", "nano_banana"):
+        return NanoBananaProvider()
     if provider == "zimage":
         return ZImageProvider()
     if provider == "gptimage":
         return GptImageProvider()
     raise ImageGenerationError(
         f"Unknown IMAGE_PROVIDER '{settings.IMAGE_PROVIDER}'. "
-        "Expected one of: imagen, zimage, gptimage."
+        "Expected one of: imagen, nanobanana, zimage, gptimage."
     )
 
 

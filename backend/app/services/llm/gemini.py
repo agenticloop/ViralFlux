@@ -42,6 +42,36 @@ def _strip_code_fences(text: str) -> str:
     return text.strip()
 
 
+def _loads_lenient(raw: str) -> Any:
+    """Parse JSON, tolerating a body truncated mid-string/array (token cap).
+
+    Tries a strict parse first. On failure, attempts to salvage the largest
+    well-formed prefix: trim back to the last complete top-level structure and
+    close any open ``"``/``]``/``}``. This rescues a script whose JSON got cut
+    off by ``max_output_tokens`` instead of failing the whole generation.
+    """
+    text = _strip_code_fences(raw)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        original = exc
+
+    # Salvage: cut to the last complete scene object and close the structure.
+    # Scenes look like ``{...}`` inside a ``"scenes": [ ... ]`` array.
+    last_obj = text.rfind("}")
+    if last_obj == -1:
+        raise original
+    candidate = text[: last_obj + 1]
+    # Balance brackets we opened but never closed.
+    opens_sq = candidate.count("[") - candidate.count("]")
+    opens_cu = candidate.count("{") - candidate.count("}")
+    candidate += "]" * max(0, opens_sq) + "}" * max(0, opens_cu)
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        raise original
+
+
 def _scene_count_for(duration_tier: str) -> int:
     seconds = DURATION_SECONDS.get(duration_tier, 60)
     n = round(seconds / _SECONDS_PER_SCENE)
@@ -150,7 +180,7 @@ class GeminiService(LLMService):
                 raw_text = getattr(response, "text", None)
                 if not raw_text:
                     raise LLMError("Gemini returned an empty response.")
-                return json.loads(_strip_code_fences(raw_text))
+                return _loads_lenient(raw_text)
             except json.JSONDecodeError as exc:
                 # A malformed JSON body is worth one more shot, but log it.
                 last_exc = exc
@@ -261,7 +291,22 @@ Return ONLY valid JSON with this exact shape:
   ]
 }}"""
 
-        max_tokens = min(8192, max(512, int((char_limit * 2) / _CHARS_PER_TOKEN) + 512))
+        # The JSON response carries the narration TWICE (the top-level "script"
+        # plus the per-scene "text" slices that reconstruct it) AND a ~30-word
+        # image_prompt per scene, on top of JSON structural overhead. Budgeting
+        # only ~2x char_limit truncates the body mid-string ("Unterminated
+        # string" JSONDecodeError).
+        #
+        # CRITICAL: the higher tiers map to *thinking* Gemini models
+        # (e.g. gemini-3.5-flash) where max_output_tokens covers BOTH the
+        # internal reasoning tokens AND the visible output. A tight budget gets
+        # entirely consumed by thinking, leaving the JSON truncated after a
+        # couple hundred chars. So size for output need, then add a fixed
+        # thinking reserve and keep a high floor.
+        approx_chars = char_limit * 2 + n_scenes * 200
+        output_tokens = int(approx_chars / _CHARS_PER_TOKEN) + 768
+        _THINKING_RESERVE = 2048  # headroom for thinking-model reasoning tokens
+        max_tokens = min(8192, max(4096, output_tokens + _THINKING_RESERVE))
         data = await self._generate_json(
             model_tier,
             prompt,
@@ -394,7 +439,9 @@ Return ONLY valid JSON with this exact shape:
             model_tier,
             prompt,
             temperature=0.7,
-            max_output_tokens=1024,
+            # Generous budget so thinking-model tiers (e.g. Max) don't exhaust
+            # the budget on reasoning and truncate the small SEO JSON.
+            max_output_tokens=4096,
         )
         if not isinstance(data, dict):
             raise LLMError("Gemini SEO response was not a JSON object.")
@@ -452,7 +499,8 @@ Return ONLY valid JSON with this exact shape:
             model_tier,
             prompt,
             temperature=1.0,
-            max_output_tokens=2048,
+            # Generous budget for thinking-model tiers (reasoning + output).
+            max_output_tokens=4096,
         )
 
         raw_ideas: Any

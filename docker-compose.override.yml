@@ -1,0 +1,25 @@
+# Dev override (auto-merged by `docker compose`). Bind-mounts live backend source
+# into backend/worker/beat so code edits apply on `docker compose restart <svc>`
+# without an image rebuild. Remove (or `-f docker-compose.yml` only) for prod.
+services:
+  backend:
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/tests:/app/tests
+      - ./backend/pytest.ini:/app/pytest.ini
+      - ./backend/requirements-dev.txt:/app/requirements-dev.txt
+      - ./media:/app/media
+      - ./assets:/app/assets:ro
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    volumes:
+      - ./backend/app:/app/app
+      - ./media:/app/media
+      - ./assets:/app/assets:ro
+
+  beat:
+    volumes:
+      - ./backend/app:/app/app
+      - ./media:/app/media
+      - ./assets:/app/assets:ro

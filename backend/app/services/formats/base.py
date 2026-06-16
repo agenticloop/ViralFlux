@@ -29,6 +29,7 @@ class FormatOutput:
     voice_settings: dict
     visual: str            # "generated_images" | "loop_footage"
     music_bucket: str
+    footage_bucket: str | None  # CC0 loop-footage bucket (loop_footage genres)
     caption_style: str     # "horror" | "brainrot"
 
 
@@ -113,6 +114,7 @@ class FormatPlugin(ABC):
             voice_settings=dict(voice_settings),
             visual=cfg["visual"],
             music_bucket=cfg["music_bucket"],
+            footage_bucket=cfg.get("footage_bucket"),
             caption_style=cfg["caption_style"],
         )
 

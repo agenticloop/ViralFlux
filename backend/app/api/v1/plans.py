@@ -179,7 +179,11 @@ async def upgrade_plan(
         )
 
     current_user.plan_id = plan.id
-    await credit_service.grant_subscription_credits(db, current_user, plan)
+    # Explicit plan switch: do not roll a prior (possibly lower) plan's leftover
+    # credits into the new plan's grant.
+    await credit_service.grant_subscription_credits(
+        db, current_user, plan, allow_rollover=False
+    )
     await db.flush()
 
     return {

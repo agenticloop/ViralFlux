@@ -163,11 +163,17 @@ class VideoPipeline:
                 None, lambda: self.ffmpeg.concat_clips(clip_paths, out_path)
             )
         else:
-            # loop_footage
-            footage = footage_library.pick_loop(fmt.music_bucket, min_seconds=voice_sec)
+            # loop_footage — footage_bucket is the CC0 clip bucket (e.g.
+            # "satisfying"), distinct from the music_bucket (e.g. "upbeat_hype").
+            bucket = getattr(fmt, "footage_bucket", None) or fmt.music_bucket
+            # A single short loop is fine: footage is looped to length, so don't
+            # demand a clip that's already >= the full narration.
+            footage = footage_library.pick_loop(bucket) or footage_library.pick_loop(
+                bucket, min_seconds=voice_sec
+            )
             if not footage:
                 raise VideoProcessingError(
-                    f"No loop footage available for bucket '{fmt.music_bucket}'."
+                    f"No loop footage available for bucket '{bucket}'."
                 )
             await loop.run_in_executor(
                 None, lambda: self.ffmpeg.loop_footage(footage, out_path, voice_sec)

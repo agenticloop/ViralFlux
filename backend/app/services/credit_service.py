@@ -65,11 +65,24 @@ async def _active_addons(db: AsyncSession, user: User) -> list[str]:
 
 
 # --------------------------------------------------------------------------- granting
-async def grant_subscription_credits(db: AsyncSession, user: User, plan: Plan) -> None:
-    """Grant a fresh monthly allowance and (re)start the billing period."""
+async def grant_subscription_credits(
+    db: AsyncSession, user: User, plan: Plan, *, allow_rollover: bool = True
+) -> None:
+    """Grant a fresh monthly allowance and (re)start the billing period.
+
+    ``allow_rollover`` gates the 1-month Pro/Agency rollover. It must be False on
+    an explicit plan switch (upgrade/downgrade) so a lower plan's leftover credits
+    are not carried into the new plan's grant; rollover only applies to a renewal
+    of the *same* rollover-eligible plan.
+    """
     rollover = 0
-    if plan.name in ("pro", "agency") and user.credits_period_end and user.subscription_credits:
-        # 1-month rollover for Pro/Agency.
+    if (
+        allow_rollover
+        and plan.name in ("pro", "agency")
+        and user.credits_period_end
+        and user.subscription_credits
+    ):
+        # 1-month rollover for Pro/Agency renewals.
         rollover = user.subscription_credits
 
     user.subscription_credits = plan.credits_per_month + rollover

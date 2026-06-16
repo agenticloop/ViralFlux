@@ -42,6 +42,7 @@ GENRES: dict[str, dict] = {
         "description": "Atmospheric first-person/true-events horror narration.",
         "visual": VISUAL_GENERATED,
         "music_bucket": "horror_ambient",
+        "footage_bucket": None,         # generated images, not loop footage
         "caption_style": "horror",      # clean, slower fade
         "default_voice_id": "pqHfZKP75CvOlQylNhV4",  # Bill
         "voices": HORROR_VOICES,
@@ -62,6 +63,7 @@ GENRES: dict[str, dict] = {
         "description": "Chaotic, deadpan, high-energy narration over satisfying loops.",
         "visual": VISUAL_LOOP,
         "music_bucket": "upbeat_hype",
+        "footage_bucket": "satisfying", # CC0 satisfying loop footage
         "caption_style": "brainrot",    # bold, energetic, heavy stroke
         "default_voice_id": "pNInz6obpgDQGcFmaJgB",  # Adam
         "voices": BRAINROT_VOICES,
@@ -79,6 +81,7 @@ GENRES: dict[str, dict] = {
         "description": "User-defined genre via seed prompt. Pro+ only.",
         "visual": VISUAL_GENERATED,
         "music_bucket": "cinematic_epic",
+        "footage_bucket": None,         # generated images, not loop footage
         "caption_style": "horror",
         "default_voice_id": "VR6AewLTigWG4xSOukaG",  # Arnold (neutral narrator)
         "voices": HORROR_VOICES + BRAINROT_VOICES,
